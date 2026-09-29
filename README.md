@@ -1,6 +1,6 @@
 # Document Approval Workflow
 
-An enterprise-style web application for managing document and business request approval workflows.
+An enterprise-style web application for managing document and business request approval workflows. 
 
 ## 🚧 Project Status
 
