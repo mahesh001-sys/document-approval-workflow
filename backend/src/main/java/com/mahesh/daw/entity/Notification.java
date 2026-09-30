@@ -46,4 +46,4 @@ public class Notification {
             readStatus = false;
         }
     }
-            }
+}
