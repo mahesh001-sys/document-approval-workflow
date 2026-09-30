@@ -2,6 +2,7 @@ package com.mahesh.daw.service;
 
 import com.mahesh.daw.entity.ApprovalAction;
 import com.mahesh.daw.entity.ApprovalHistory;
+import com.mahesh.daw.entity.AuditLog;
 import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.entity.RequestStatus;
 import com.mahesh.daw.entity.User;
@@ -16,6 +17,7 @@ public class ApprovalWorkflowService {
     private final RequestService requestService;
     private final UserService userService;
     private final ApprovalHistoryService approvalHistoryService;
+    private final AuditLogService auditLogService;
 
     @Transactional
     public Request submitRequest(Long requestId) {
@@ -26,7 +28,16 @@ public class ApprovalWorkflowService {
 
         request.setStatus(RequestStatus.SUBMITTED);
 
-        return requestService.updateRequest(request);
+        Request savedRequest = requestService.updateRequest(request);
+
+        createAuditLog(
+                savedRequest,
+                null,
+                "REQUEST_SUBMITTED",
+                "Request submitted for approval"
+        );
+
+        return savedRequest;
     }
 
     @Transactional
@@ -38,7 +49,16 @@ public class ApprovalWorkflowService {
 
         request.setStatus(RequestStatus.MANAGER_REVIEW);
 
-        return requestService.updateRequest(request);
+        Request savedRequest = requestService.updateRequest(request);
+
+        createAuditLog(
+                savedRequest,
+                null,
+                "MANAGER_REVIEW_STARTED",
+                "Manager review started"
+        );
+
+        return savedRequest;
     }
 
     @Transactional
@@ -68,6 +88,13 @@ public class ApprovalWorkflowService {
                 RequestStatus.MANAGER_APPROVED
         );
 
+        createAuditLog(
+                savedRequest,
+                approver,
+                "MANAGER_APPROVED",
+                "Request approved by manager"
+        );
+
         return savedRequest;
     }
 
@@ -80,7 +107,16 @@ public class ApprovalWorkflowService {
 
         request.setStatus(RequestStatus.ADMIN_REVIEW);
 
-        return requestService.updateRequest(request);
+        Request savedRequest = requestService.updateRequest(request);
+
+        createAuditLog(
+                savedRequest,
+                null,
+                "ADMIN_REVIEW_STARTED",
+                "Admin review started"
+        );
+
+        return savedRequest;
     }
 
     @Transactional
@@ -110,9 +146,25 @@ public class ApprovalWorkflowService {
                 RequestStatus.APPROVED
         );
 
+        createAuditLog(
+                savedRequest,
+                approver,
+                "ADMIN_APPROVED",
+                "Request approved by admin"
+        );
+
         savedRequest.setStatus(RequestStatus.COMPLETED);
 
-        return requestService.updateRequest(savedRequest);
+        savedRequest = requestService.updateRequest(savedRequest);
+
+        createAuditLog(
+                savedRequest,
+                approver,
+                "REQUEST_COMPLETED",
+                "Request workflow completed"
+        );
+
+        return savedRequest;
     }
 
     @Transactional
@@ -147,6 +199,13 @@ public class ApprovalWorkflowService {
                 comments,
                 previousStatus,
                 RequestStatus.REJECTED
+        );
+
+        createAuditLog(
+                savedRequest,
+                approver,
+                "REQUEST_REJECTED",
+                "Request rejected during approval"
         );
 
         return savedRequest;
@@ -186,6 +245,13 @@ public class ApprovalWorkflowService {
                 RequestStatus.RETURNED
         );
 
+        createAuditLog(
+                savedRequest,
+                approver,
+                "REQUEST_RETURNED",
+                "Request returned for correction"
+        );
+
         return savedRequest;
     }
 
@@ -222,5 +288,22 @@ public class ApprovalWorkflowService {
                 .build();
 
         approvalHistoryService.createHistory(history);
+    }
+
+    private void createAuditLog(
+            Request request,
+            User user,
+            String action,
+            String description) {
+
+        AuditLog auditLog = AuditLog.builder()
+                .user(user)
+                .action(action)
+                .entityType("REQUEST")
+                .entityId(request.getId())
+                .description(description)
+                .build();
+
+        auditLogService.createAuditLog(auditLog);
     }
 }
