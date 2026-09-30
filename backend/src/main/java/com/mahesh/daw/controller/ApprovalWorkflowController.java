@@ -13,7 +13,6 @@ public class ApprovalWorkflowController {
 
     private final ApprovalWorkflowService approvalWorkflowService;
 
-    // Submit a request
     @PostMapping("/{requestId}/submit")
     public ResponseEntity<Request> submitRequest(
             @PathVariable Long requestId) {
@@ -23,58 +22,80 @@ public class ApprovalWorkflowController {
         );
     }
 
-    // Manager approves a request
+    @PostMapping("/{requestId}/manager/review")
+    public ResponseEntity<Request> startManagerReview(
+            @PathVariable Long requestId) {
+
+        return ResponseEntity.ok(
+                approvalWorkflowService.startManagerReview(requestId)
+        );
+    }
+
     @PostMapping("/{requestId}/manager/approve")
-    public ResponseEntity<Request> managerApprove(
+    public ResponseEntity<Request> approveManagerRequest(
             @PathVariable Long requestId,
-            @RequestParam(required = false) String comment) {
+            @RequestParam Long approverId,
+            @RequestParam(required = false) String comments) {
 
         return ResponseEntity.ok(
-                approvalWorkflowService.managerApprove(
+                approvalWorkflowService.approveManagerRequest(
                         requestId,
-                        comment
+                        approverId,
+                        comments
                 )
         );
     }
 
-    // Manager rejects a request
-    @PostMapping("/{requestId}/manager/reject")
-    public ResponseEntity<Request> managerReject(
-            @PathVariable Long requestId,
-            @RequestParam(required = false) String comment) {
+    @PostMapping("/{requestId}/admin/review")
+    public ResponseEntity<Request> startAdminReview(
+            @PathVariable Long requestId) {
 
         return ResponseEntity.ok(
-                approvalWorkflowService.managerReject(
-                        requestId,
-                        comment
-                )
+                approvalWorkflowService.startAdminReview(requestId)
         );
     }
 
-    // Admin approves a request
     @PostMapping("/{requestId}/admin/approve")
-    public ResponseEntity<Request> adminApprove(
+    public ResponseEntity<Request> approveAdminRequest(
             @PathVariable Long requestId,
-            @RequestParam(required = false) String comment) {
+            @RequestParam Long approverId,
+            @RequestParam(required = false) String comments) {
 
         return ResponseEntity.ok(
-                approvalWorkflowService.adminApprove(
+                approvalWorkflowService.approveAdminRequest(
                         requestId,
-                        comment
+                        approverId,
+                        comments
                 )
         );
     }
 
-    // Admin rejects a request
-    @PostMapping("/{requestId}/admin/reject")
-    public ResponseEntity<Request> adminReject(
+    @PostMapping("/{requestId}/reject")
+    public ResponseEntity<Request> rejectRequest(
             @PathVariable Long requestId,
-            @RequestParam(required = false) String comment) {
+            @RequestParam Long approverId,
+            @RequestParam(required = false) String comments) {
 
         return ResponseEntity.ok(
-                approvalWorkflowService.adminReject(
+                approvalWorkflowService.rejectRequest(
                         requestId,
-                        comment
+                        approverId,
+                        comments
+                )
+        );
+    }
+
+    @PostMapping("/{requestId}/return")
+    public ResponseEntity<Request> returnRequest(
+            @PathVariable Long requestId,
+            @RequestParam Long approverId,
+            @RequestParam(required = false) String comments) {
+
+        return ResponseEntity.ok(
+                approvalWorkflowService.returnRequest(
+                        requestId,
+                        approverId,
+                        comments
                 )
         );
     }
