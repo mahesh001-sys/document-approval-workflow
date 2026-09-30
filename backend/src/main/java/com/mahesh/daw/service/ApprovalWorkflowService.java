@@ -2,8 +2,6 @@ package com.mahesh.daw.service;
 
 import com.mahesh.daw.entity.ApprovalAction;
 import com.mahesh.daw.entity.ApprovalHistory;
-import com.mahesh.daw.entity.ApprovalStatus;
-import com.mahesh.daw.entity.ApprovalStep;
 import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.entity.RequestStatus;
 import com.mahesh.daw.entity.User;
@@ -16,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ApprovalWorkflowService {
 
     private final RequestService requestService;
-    private final ApprovalStepService approvalStepService;
+    private final UserService userService;
     private final ApprovalHistoryService approvalHistoryService;
 
     @Transactional
@@ -24,72 +22,97 @@ public class ApprovalWorkflowService {
 
         Request request = requestService.getRequestById(requestId);
 
-        validateStatus(
-                request,
-                RequestStatus.DRAFT
-        );
-
-        RequestStatus previousStatus = request.getStatus();
+        validateStatus(request, RequestStatus.DRAFT);
 
         request.setStatus(RequestStatus.SUBMITTED);
 
-        Request savedRequest = requestService.updateRequest(request);
-
-        createHistory(
-                savedRequest,
-                null,
-                ApprovalAction.APPROVED,
-                previousStatus,
-                RequestStatus.SUBMITTED,
-                "Request submitted"
-        );
-
-        return savedRequest;
+        return requestService.updateRequest(request);
     }
 
     @Transactional
-    public Request approveRequest(
+    public Request startManagerReview(Long requestId) {
+
+        Request request = requestService.getRequestById(requestId);
+
+        validateStatus(request, RequestStatus.SUBMITTED);
+
+        request.setStatus(RequestStatus.MANAGER_REVIEW);
+
+        return requestService.updateRequest(request);
+    }
+
+    @Transactional
+    public Request approveManagerRequest(
             Long requestId,
             Long approverId,
             String comments) {
 
         Request request = requestService.getRequestById(requestId);
 
-        User approver = new User();
-        approver.setId(approverId);
+        validateStatus(request, RequestStatus.MANAGER_REVIEW);
+
+        User approver = userService.getUserById(approverId);
 
         RequestStatus previousStatus = request.getStatus();
 
-        if (previousStatus == RequestStatus.MANAGER_REVIEW) {
-
-            request.setStatus(RequestStatus.ADMIN_REVIEW);
-
-        } else if (previousStatus == RequestStatus.ADMIN_REVIEW) {
-
-            request.setStatus(RequestStatus.APPROVED);
-
-        } else {
-
-            throw new IllegalStateException(
-                    "Request cannot be approved from status: "
-                            + previousStatus
-            );
-        }
+        request.setStatus(RequestStatus.MANAGER_APPROVED);
 
         Request savedRequest = requestService.updateRequest(request);
 
-        ApprovalHistory history = ApprovalHistory.builder()
-                .request(savedRequest)
-                .approver(approver)
-                .action(ApprovalAction.APPROVED)
-                .comments(comments)
-                .previousStatus(previousStatus)
-                .newStatus(savedRequest.getStatus())
-                .build();
-
-        approvalHistoryService.createHistory(history);
+        createApprovalHistory(
+                savedRequest,
+                approver,
+                ApprovalAction.APPROVED,
+                comments,
+                previousStatus,
+                RequestStatus.MANAGER_APPROVED
+        );
 
         return savedRequest;
+    }
+
+    @Transactional
+    public Request startAdminReview(Long requestId) {
+
+        Request request = requestService.getRequestById(requestId);
+
+        validateStatus(request, RequestStatus.MANAGER_APPROVED);
+
+        request.setStatus(RequestStatus.ADMIN_REVIEW);
+
+        return requestService.updateRequest(request);
+    }
+
+    @Transactional
+    public Request approveAdminRequest(
+            Long requestId,
+            Long approverId,
+            String comments) {
+
+        Request request = requestService.getRequestById(requestId);
+
+        validateStatus(request, RequestStatus.ADMIN_REVIEW);
+
+        User approver = userService.getUserById(approverId);
+
+        RequestStatus previousStatus = request.getStatus();
+
+        request.setStatus(RequestStatus.APPROVED);
+
+        Request savedRequest = requestService.updateRequest(request);
+
+        createApprovalHistory(
+                savedRequest,
+                approver,
+                ApprovalAction.APPROVED,
+                comments,
+                previousStatus,
+                RequestStatus.APPROVED
+        );
+
+        savedRequest.setStatus(RequestStatus.COMPLETED);
+
+        return requestService.updateRequest(savedRequest);
     }
 
     @Transactional
@@ -100,34 +123,31 @@ public class ApprovalWorkflowService {
 
         Request request = requestService.getRequestById(requestId);
 
-        RequestStatus previousStatus = request.getStatus();
-
-        if (previousStatus != RequestStatus.MANAGER_REVIEW
-                && previousStatus != RequestStatus.ADMIN_REVIEW) {
+        if (request.getStatus() != RequestStatus.MANAGER_REVIEW
+                && request.getStatus() != RequestStatus.ADMIN_REVIEW) {
 
             throw new IllegalStateException(
                     "Request cannot be rejected from status: "
-                            + previousStatus
+                            + request.getStatus()
             );
         }
 
-        User approver = new User();
-        approver.setId(approverId);
+        User approver = userService.getUserById(approverId);
+
+        RequestStatus previousStatus = request.getStatus();
 
         request.setStatus(RequestStatus.REJECTED);
 
         Request savedRequest = requestService.updateRequest(request);
 
-        ApprovalHistory history = ApprovalHistory.builder()
-                .request(savedRequest)
-                .approver(approver)
-                .action(ApprovalAction.REJECTED)
-                .comments(comments)
-                .previousStatus(previousStatus)
-                .newStatus(RequestStatus.REJECTED)
-                .build();
-
-        approvalHistoryService.createHistory(history);
+        createApprovalHistory(
+                savedRequest,
+                approver,
+                ApprovalAction.REJECTED,
+                comments,
+                previousStatus,
+                RequestStatus.REJECTED
+        );
 
         return savedRequest;
     }
@@ -140,34 +160,31 @@ public class ApprovalWorkflowService {
 
         Request request = requestService.getRequestById(requestId);
 
-        RequestStatus previousStatus = request.getStatus();
-
-        if (previousStatus != RequestStatus.MANAGER_REVIEW
-                && previousStatus != RequestStatus.ADMIN_REVIEW) {
+        if (request.getStatus() != RequestStatus.MANAGER_REVIEW
+                && request.getStatus() != RequestStatus.ADMIN_REVIEW) {
 
             throw new IllegalStateException(
                     "Request cannot be returned from status: "
-                            + previousStatus
+                            + request.getStatus()
             );
         }
 
-        User approver = new User();
-        approver.setId(approverId);
+        User approver = userService.getUserById(approverId);
+
+        RequestStatus previousStatus = request.getStatus();
 
         request.setStatus(RequestStatus.RETURNED);
 
         Request savedRequest = requestService.updateRequest(request);
 
-        ApprovalHistory history = ApprovalHistory.builder()
-                .request(savedRequest)
-                .approver(approver)
-                .action(ApprovalAction.RETURNED)
-                .comments(comments)
-                .previousStatus(previousStatus)
-                .newStatus(RequestStatus.RETURNED)
-                .build();
-
-        approvalHistoryService.createHistory(history);
+        createApprovalHistory(
+                savedRequest,
+                approver,
+                ApprovalAction.RETURNED,
+                comments,
+                previousStatus,
+                RequestStatus.RETURNED
+        );
 
         return savedRequest;
     }
@@ -187,13 +204,13 @@ public class ApprovalWorkflowService {
         }
     }
 
-    private void createHistory(
+    private void createApprovalHistory(
             Request request,
             User approver,
             ApprovalAction action,
+            String comments,
             RequestStatus previousStatus,
-            RequestStatus newStatus,
-            String comments) {
+            RequestStatus newStatus) {
 
         ApprovalHistory history = ApprovalHistory.builder()
                 .request(request)
