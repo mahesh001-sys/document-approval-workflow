@@ -1,10 +1,14 @@
 package com.mahesh.daw.controller;
 
 import com.mahesh.daw.entity.ApprovalHistory;
+import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.service.ApprovalHistoryService;
+import com.mahesh.daw.service.RequestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/approval-history")
@@ -12,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class ApprovalHistoryController {
 
     private final ApprovalHistoryService approvalHistoryService;
+    private final RequestService requestService;
 
     // Create approval history
     @PostMapping
@@ -35,14 +40,13 @@ public class ApprovalHistoryController {
 
     // Get approval history for a request
     @GetMapping("/request/{requestId}")
-    public ResponseEntity<?> getHistoryByRequest(
+    public ResponseEntity<List<ApprovalHistory>> getHistoryByRequest(
             @PathVariable Long requestId) {
 
+        Request request = requestService.getRequestById(requestId);
+
         return ResponseEntity.ok(
-                approvalHistoryService
-                        .getHistoryByRequest(
-                                new com.mahesh.daw.entity.Request()
-                        )
+                approvalHistoryService.getHistoryByRequest(request)
         );
     }
 }
