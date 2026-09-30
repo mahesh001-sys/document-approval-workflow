@@ -3,6 +3,7 @@ package com.mahesh.daw.service;
 import com.mahesh.daw.entity.ApprovalAction;
 import com.mahesh.daw.entity.ApprovalHistory;
 import com.mahesh.daw.entity.AuditLog;
+import com.mahesh.daw.entity.Notification;
 import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.entity.RequestStatus;
 import com.mahesh.daw.entity.User;
@@ -18,6 +19,7 @@ public class ApprovalWorkflowService {
     private final UserService userService;
     private final ApprovalHistoryService approvalHistoryService;
     private final AuditLogService auditLogService;
+    private final NotificationService notificationService;
 
     @Transactional
     public Request submitRequest(Long requestId) {
@@ -95,6 +97,13 @@ public class ApprovalWorkflowService {
                 "Request approved by manager"
         );
 
+        createNotification(
+                savedRequest.getRequester(),
+                savedRequest,
+                "Request Manager Approved",
+                "Your request has been approved by the manager."
+        );
+
         return savedRequest;
     }
 
@@ -164,6 +173,13 @@ public class ApprovalWorkflowService {
                 "Request workflow completed"
         );
 
+        createNotification(
+                savedRequest.getRequester(),
+                savedRequest,
+                "Request Approved",
+                "Your request has been fully approved."
+        );
+
         return savedRequest;
     }
 
@@ -208,6 +224,13 @@ public class ApprovalWorkflowService {
                 "Request rejected during approval"
         );
 
+        createNotification(
+                savedRequest.getRequester(),
+                savedRequest,
+                "Request Rejected",
+                "Your request has been rejected."
+        );
+
         return savedRequest;
     }
 
@@ -250,6 +273,13 @@ public class ApprovalWorkflowService {
                 approver,
                 "REQUEST_RETURNED",
                 "Request returned for correction"
+        );
+
+        createNotification(
+                savedRequest.getRequester(),
+                savedRequest,
+                "Request Returned",
+                "Your request has been returned for correction."
         );
 
         return savedRequest;
@@ -305,5 +335,26 @@ public class ApprovalWorkflowService {
                 .build();
 
         auditLogService.createAuditLog(auditLog);
+    }
+
+    private void createNotification(
+            User user,
+            Request request,
+            String title,
+            String message) {
+
+        if (user == null) {
+            return;
+        }
+
+        Notification notification = Notification.builder()
+                .user(user)
+                .request(request)
+                .title(title)
+                .message(message)
+                .readStatus(false)
+                .build();
+
+        notificationService.createNotification(notification);
     }
 }
