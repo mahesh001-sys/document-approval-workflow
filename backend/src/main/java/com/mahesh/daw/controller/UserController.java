@@ -2,6 +2,7 @@ package com.mahesh.daw.controller;
 
 import com.mahesh.daw.entity.User;
 import com.mahesh.daw.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ public class UserController {
     // Create a new user
     @PostMapping
     public ResponseEntity<User> createUser(
-            @RequestBody User user) {
+            @Valid @RequestBody User user) {
 
         User createdUser = userService.createUser(user);
 
