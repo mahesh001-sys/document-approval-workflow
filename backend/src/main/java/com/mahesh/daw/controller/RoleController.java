@@ -2,6 +2,7 @@ package com.mahesh.daw.controller;
 
 import com.mahesh.daw.entity.Role;
 import com.mahesh.daw.service.RoleService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ public class RoleController {
     // Create role
     @PostMapping
     public ResponseEntity<Role> createRole(
-            @RequestBody Role role) {
+            @Valid @RequestBody Role role) {
 
         Role createdRole = roleService.createRole(role);
 
