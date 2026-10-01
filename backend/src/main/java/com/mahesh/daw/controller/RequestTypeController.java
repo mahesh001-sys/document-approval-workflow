@@ -2,6 +2,7 @@ package com.mahesh.daw.controller;
 
 import com.mahesh.daw.entity.RequestType;
 import com.mahesh.daw.service.RequestTypeService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +20,7 @@ public class RequestTypeController {
     // Create request type
     @PostMapping
     public ResponseEntity<RequestType> createRequestType(
-            @RequestBody RequestType requestType) {
+            @Valid @RequestBody RequestType requestType) {
 
         RequestType createdRequestType =
                 requestTypeService.createRequestType(requestType);
