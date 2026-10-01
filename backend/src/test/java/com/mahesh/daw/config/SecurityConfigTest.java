@@ -1,8 +1,6 @@
 package com.mahesh.daw.config;
 
 import com.mahesh.daw.security.JwtAuthenticationFilter;
-import com.mahesh.daw.security.RestAccessDeniedHandler;
-import com.mahesh.daw.security.RestAuthenticationEntryPoint;
 
 import org.junit.jupiter.api.Test;
 
@@ -30,12 +28,6 @@ class SecurityConfigTest {
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @MockBean
-    private RestAuthenticationEntryPoint restAuthenticationEntryPoint;
-
-    @MockBean
-    private RestAccessDeniedHandler restAccessDeniedHandler;
-
     @Configuration
     static class TestSecurityConfiguration {
 
@@ -45,6 +37,13 @@ class SecurityConfigTest {
 
             http
                     .csrf(csrf -> csrf.disable())
+
+                    .exceptionHandling(exception ->
+                            exception.authenticationEntryPoint(
+                                    (request, response, authException) ->
+                                            response.sendError(401)
+                            )
+                    )
 
                     .authorizeHttpRequests(auth -> auth
                             .anyRequest().authenticated()
