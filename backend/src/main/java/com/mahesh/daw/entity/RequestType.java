@@ -1,6 +1,8 @@
 package com.mahesh.daw.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -23,9 +25,12 @@ public class RequestType {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Request type name cannot be blank")
+    @Size(max = 100, message = "Request type name cannot exceed 100 characters")
     @Column(nullable = false, unique = true, length = 100)
     private String name;
 
+    @Size(max = 500, message = "Description cannot exceed 500 characters")
     @Column(length = 500)
     private String description;
 
