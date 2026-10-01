@@ -2,20 +2,24 @@ package com.mahesh.daw.controller;
 
 import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.service.ApprovalWorkflowService;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/workflow")
 @RequiredArgsConstructor
+@Validated
 public class ApprovalWorkflowController {
 
     private final ApprovalWorkflowService approvalWorkflowService;
 
     @PostMapping("/{requestId}/submit")
     public ResponseEntity<Request> submitRequest(
-            @PathVariable Long requestId) {
+            @PathVariable @Positive Long requestId) {
 
         return ResponseEntity.ok(
                 approvalWorkflowService.submitRequest(requestId)
@@ -24,7 +28,7 @@ public class ApprovalWorkflowController {
 
     @PostMapping("/{requestId}/manager/review")
     public ResponseEntity<Request> startManagerReview(
-            @PathVariable Long requestId) {
+            @PathVariable @Positive Long requestId) {
 
         return ResponseEntity.ok(
                 approvalWorkflowService.startManagerReview(requestId)
@@ -33,9 +37,11 @@ public class ApprovalWorkflowController {
 
     @PostMapping("/{requestId}/manager/approve")
     public ResponseEntity<Request> approveManagerRequest(
-            @PathVariable Long requestId,
-            @RequestParam Long approverId,
-            @RequestParam(required = false) String comments) {
+            @PathVariable @Positive Long requestId,
+            @RequestParam @Positive Long approverId,
+            @RequestParam(required = false)
+            @Size(max = 1000, message = "Comments cannot exceed 1000 characters")
+            String comments) {
 
         return ResponseEntity.ok(
                 approvalWorkflowService.approveManagerRequest(
@@ -48,7 +54,7 @@ public class ApprovalWorkflowController {
 
     @PostMapping("/{requestId}/admin/review")
     public ResponseEntity<Request> startAdminReview(
-            @PathVariable Long requestId) {
+            @PathVariable @Positive Long requestId) {
 
         return ResponseEntity.ok(
                 approvalWorkflowService.startAdminReview(requestId)
@@ -57,9 +63,11 @@ public class ApprovalWorkflowController {
 
     @PostMapping("/{requestId}/admin/approve")
     public ResponseEntity<Request> approveAdminRequest(
-            @PathVariable Long requestId,
-            @RequestParam Long approverId,
-            @RequestParam(required = false) String comments) {
+            @PathVariable @Positive Long requestId,
+            @RequestParam @Positive Long approverId,
+            @RequestParam(required = false)
+            @Size(max = 1000, message = "Comments cannot exceed 1000 characters")
+            String comments) {
 
         return ResponseEntity.ok(
                 approvalWorkflowService.approveAdminRequest(
@@ -72,9 +80,11 @@ public class ApprovalWorkflowController {
 
     @PostMapping("/{requestId}/reject")
     public ResponseEntity<Request> rejectRequest(
-            @PathVariable Long requestId,
-            @RequestParam Long approverId,
-            @RequestParam(required = false) String comments) {
+            @PathVariable @Positive Long requestId,
+            @RequestParam @Positive Long approverId,
+            @RequestParam(required = false)
+            @Size(max = 1000, message = "Comments cannot exceed 1000 characters")
+            String comments) {
 
         return ResponseEntity.ok(
                 approvalWorkflowService.rejectRequest(
@@ -87,9 +97,11 @@ public class ApprovalWorkflowController {
 
     @PostMapping("/{requestId}/return")
     public ResponseEntity<Request> returnRequest(
-            @PathVariable Long requestId,
-            @RequestParam Long approverId,
-            @RequestParam(required = false) String comments) {
+            @PathVariable @Positive Long requestId,
+            @RequestParam @Positive Long approverId,
+            @RequestParam(required = false)
+            @Size(max = 1000, message = "Comments cannot exceed 1000 characters")
+            String comments) {
 
         return ResponseEntity.ok(
                 approvalWorkflowService.returnRequest(
