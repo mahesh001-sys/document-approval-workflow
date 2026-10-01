@@ -2,6 +2,7 @@ package com.mahesh.daw.controller;
 
 import com.mahesh.daw.entity.Notification;
 import com.mahesh.daw.service.NotificationService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +17,7 @@ public class NotificationController {
     // Create notification
     @PostMapping
     public ResponseEntity<Notification> createNotification(
-            @RequestBody Notification notification) {
+            @Valid @RequestBody Notification notification) {
 
         return ResponseEntity.ok(
                 notificationService.createNotification(notification)
