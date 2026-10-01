@@ -38,6 +38,16 @@ public class UserController {
         );
     }
 
+    // Get user by email
+    @GetMapping("/email/{email}")
+    public ResponseEntity<User> getUserByEmail(
+            @PathVariable String email) {
+
+        return ResponseEntity.ok(
+                userService.getUserByEmail(email)
+        );
+    }
+
     // Get all users
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
@@ -47,28 +57,13 @@ public class UserController {
         );
     }
 
-    // Update user
-    @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(
-            @PathVariable Long id,
-            @RequestBody User user) {
+    // Check whether an email already exists
+    @GetMapping("/exists/{email}")
+    public ResponseEntity<Boolean> existsByEmail(
+            @PathVariable String email) {
 
-        User existingUser = userService.getUserById(id);
-
-        user.setId(existingUser.getId());
-
-        User updatedUser = userService.updateUser(user);
-
-        return ResponseEntity.ok(updatedUser);
-    }
-
-    // Delete user
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(
-            @PathVariable Long id) {
-
-        userService.deleteUser(id);
-
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(
+                userService.existsByEmail(email)
+        );
     }
 }
