@@ -2,6 +2,7 @@ package com.mahesh.daw.controller;
 
 import com.mahesh.daw.entity.Comment;
 import com.mahesh.daw.service.CommentService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +18,7 @@ public class CommentController {
     // Add a comment
     @PostMapping
     public ResponseEntity<Comment> addComment(
-            @RequestBody Comment comment) {
+            @Valid @RequestBody Comment comment) {
 
         Comment savedComment =
                 commentService.addComment(comment);
