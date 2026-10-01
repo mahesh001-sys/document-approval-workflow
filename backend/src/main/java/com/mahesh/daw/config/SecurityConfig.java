@@ -30,8 +30,9 @@ public class SecurityConfig {
 
                         // Public endpoints for now
                         .requestMatchers(
-                                "/api/users",
-                                "/api/roles"
+                            "/api/auth/login",
+                            "/api/users",
+                            "/api/roles"
                         ).permitAll()
 
                         // All other APIs require authentication
