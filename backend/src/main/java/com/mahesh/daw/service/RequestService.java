@@ -20,7 +20,7 @@ public class RequestService {
 
         if (request.getRequestNumber() != null
                 && requestRepository.existsByRequestNumber(
-                        request.getRequestNumber())) {
+                request.getRequestNumber())) {
 
             throw new IllegalArgumentException(
                     "Request already exists with number: "
@@ -64,4 +64,47 @@ public class RequestService {
     }
 
     public List<Request> getRequestsByStatus(RequestStatus status) {
-       
+        return requestRepository.findByStatus(status);
+    }
+
+    public List<Request> getRequestsByRequesterAndStatus(
+            User requester,
+            RequestStatus status) {
+
+        return requestRepository.findByRequesterAndStatus(
+                requester,
+                status
+        );
+    }
+
+    public Request updateRequest(Request request) {
+        return requestRepository.save(request);
+    }
+
+    public void deleteRequest(Long id) {
+
+        Request request = getRequestById(id);
+
+        requestRepository.delete(request);
+    }
+
+    // Submit a draft request
+    public Request submitRequest(Long id) {
+
+        Request request = getRequestById(id);
+
+        if (request.getStatus() != RequestStatus.DRAFT) {
+            throw new IllegalArgumentException(
+                    "Only DRAFT requests can be submitted"
+            );
+        }
+
+        request.setStatus(RequestStatus.SUBMITTED);
+
+        request.setSubmittedAt(
+                LocalDateTime.now()
+        );
+
+        return requestRepository.save(request);
+    }
+}
