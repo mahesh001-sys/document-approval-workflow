@@ -1,9 +1,10 @@
-package com.mahesh.daw.controller;
+ package com.mahesh.daw.controller;
 
 import com.mahesh.daw.entity.ApprovalStep;
 import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.service.ApprovalStepService;
 import com.mahesh.daw.service.RequestService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +23,7 @@ public class ApprovalStepController {
     // Create approval step
     @PostMapping
     public ResponseEntity<ApprovalStep> createApprovalStep(
-            @RequestBody ApprovalStep approvalStep) {
+            @Valid @RequestBody ApprovalStep approvalStep) {
 
         ApprovalStep createdStep =
                 approvalStepService.createApprovalStep(approvalStep);
@@ -74,7 +75,7 @@ public class ApprovalStepController {
     @PutMapping("/{id}")
     public ResponseEntity<ApprovalStep> updateApprovalStep(
             @PathVariable Long id,
-            @RequestBody ApprovalStep approvalStep) {
+            @Valid @RequestBody ApprovalStep approvalStep) {
 
         ApprovalStep existingStep =
                 approvalStepService.getApprovalStepById(id);
