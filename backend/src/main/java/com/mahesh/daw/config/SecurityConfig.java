@@ -1,6 +1,8 @@
 package com.mahesh.daw.config;
 
 import com.mahesh.daw.security.JwtAuthenticationFilter;
+import com.mahesh.daw.security.RestAccessDeniedHandler;
+import com.mahesh.daw.security.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +20,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+
+    private final RestAccessDeniedHandler restAccessDeniedHandler;
 
     // BCrypt password encoder
     @Bean
@@ -63,6 +69,16 @@ public class SecurityConfig {
 
                         // Everything else requires authentication
                         .anyRequest().authenticated()
+                )
+
+                // REST security error handling
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(
+                                restAuthenticationEntryPoint
+                        )
+                        .accessDeniedHandler(
+                                restAccessDeniedHandler
+                        )
                 )
 
                 .addFilterBefore(
