@@ -2,6 +2,7 @@ package com.mahesh.daw.controller;
 
 import com.mahesh.daw.entity.Document;
 import com.mahesh.daw.service.DocumentService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +18,7 @@ public class DocumentController {
     // Save a document
     @PostMapping
     public ResponseEntity<Document> saveDocument(
-            @RequestBody Document document) {
+            @Valid @RequestBody Document document) {
 
         Document savedDocument =
                 documentService.saveDocument(document);
