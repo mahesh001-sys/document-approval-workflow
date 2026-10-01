@@ -174,4 +174,61 @@ class JwtAuthenticationFilterTest {
                 response
         );
     }
+
+    @Test
+    void expiredJwtShouldRemainUnauthenticated()
+            throws Exception {
+
+        String token = "expired-jwt-token";
+
+        UserDetails userDetails =
+                User.withUsername("test@example.com")
+                        .password("encoded-password")
+                        .roles("USER")
+                        .build();
+
+        when(jwtService.extractUsername(token))
+                .thenReturn("test@example.com");
+
+        when(userDetailsService.loadUserByUsername(
+                "test@example.com"))
+                .thenReturn(userDetails);
+
+        when(jwtService.isTokenValid(
+                token,
+                userDetails))
+                .thenReturn(false);
+
+        MockHttpServletRequest request =
+                new MockHttpServletRequest();
+
+        request.addHeader(
+                "Authorization",
+                "Bearer " + token
+        );
+
+        MockHttpServletResponse response =
+                new MockHttpServletResponse();
+
+        FilterChain filterChain =
+                mock(FilterChain.class);
+
+        filter.doFilter(
+                request,
+                response,
+                filterChain
+        );
+
+        var authentication =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
+
+        assertNull(authentication);
+
+        verify(filterChain).doFilter(
+                request,
+                response
+        );
+    }
 }
