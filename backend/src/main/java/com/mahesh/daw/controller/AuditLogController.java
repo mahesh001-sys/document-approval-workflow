@@ -2,6 +2,7 @@ package com.mahesh.daw.controller;
 
 import com.mahesh.daw.entity.AuditLog;
 import com.mahesh.daw.service.AuditLogService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +17,7 @@ public class AuditLogController {
     // Create audit log
     @PostMapping
     public ResponseEntity<AuditLog> createAuditLog(
-            @RequestBody AuditLog auditLog) {
+            @Valid @RequestBody AuditLog auditLog) {
 
         return ResponseEntity.ok(
                 auditLogService.createAuditLog(auditLog)
