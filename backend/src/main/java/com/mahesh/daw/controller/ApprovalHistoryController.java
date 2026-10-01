@@ -4,6 +4,7 @@ import com.mahesh.daw.entity.ApprovalHistory;
 import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.service.ApprovalHistoryService;
 import com.mahesh.daw.service.RequestService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +22,7 @@ public class ApprovalHistoryController {
     // Create approval history
     @PostMapping
     public ResponseEntity<ApprovalHistory> createHistory(
-            @RequestBody ApprovalHistory history) {
+            @Valid @RequestBody ApprovalHistory history) {
 
         return ResponseEntity.ok(
                 approvalHistoryService.createHistory(history)
