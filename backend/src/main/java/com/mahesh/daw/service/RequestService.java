@@ -7,6 +7,7 @@ import com.mahesh.daw.repository.RequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -18,7 +19,8 @@ public class RequestService {
     public Request createRequest(Request request) {
 
         if (request.getRequestNumber() != null
-                && requestRepository.existsByRequestNumber(request.getRequestNumber())) {
+                && requestRepository.existsByRequestNumber(
+                        request.getRequestNumber())) {
 
             throw new IllegalArgumentException(
                     "Request already exists with number: "
@@ -62,27 +64,4 @@ public class RequestService {
     }
 
     public List<Request> getRequestsByStatus(RequestStatus status) {
-        return requestRepository.findByStatus(status);
-    }
-
-    public List<Request> getRequestsByRequesterAndStatus(
-            User requester,
-            RequestStatus status) {
-
-        return requestRepository.findByRequesterAndStatus(
-                requester,
-                status
-        );
-    }
-
-    public Request updateRequest(Request request) {
-        return requestRepository.save(request);
-    }
-
-    public void deleteRequest(Long id) {
-
-        Request request = getRequestById(id);
-
-        requestRepository.delete(request);
-    }
-}
+       
