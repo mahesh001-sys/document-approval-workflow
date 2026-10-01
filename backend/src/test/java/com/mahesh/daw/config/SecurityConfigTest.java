@@ -3,18 +3,25 @@ package com.mahesh.daw.config;
 import com.mahesh.daw.security.JwtAuthenticationFilter;
 import com.mahesh.daw.security.RestAccessDeniedHandler;
 import com.mahesh.daw.security.RestAuthenticationEntryPoint;
+
 import org.junit.jupiter.api.Test;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest
-@Import(SecurityConfig.class)
+@Import({
+        SecurityConfig.class,
+        RestAuthenticationEntryPoint.class,
+        RestAccessDeniedHandler.class
+})
 class SecurityConfigTest {
 
     @Autowired
@@ -24,10 +31,7 @@ class SecurityConfigTest {
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @MockBean
-    private RestAuthenticationEntryPoint restAuthenticationEntryPoint;
-
-    @MockBean
-    private RestAccessDeniedHandler restAccessDeniedHandler;
+    private AuthenticationManager authenticationManager;
 
     @Test
     void protectedEndpointWithoutTokenShouldBeUnauthorized()
