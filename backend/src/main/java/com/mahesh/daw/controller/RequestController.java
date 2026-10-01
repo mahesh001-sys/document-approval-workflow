@@ -2,8 +2,8 @@ package com.mahesh.daw.controller;
 
 import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.entity.RequestStatus;
-import com.mahesh.daw.entity.User;
 import com.mahesh.daw.service.RequestService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +21,7 @@ public class RequestController {
     // Create a new request
     @PostMapping
     public ResponseEntity<Request> createRequest(
-            @RequestBody Request request) {
+            @Valid @RequestBody Request request) {
 
         Request createdRequest = requestService.createRequest(request);
 
@@ -73,7 +73,7 @@ public class RequestController {
     @PutMapping("/{id}")
     public ResponseEntity<Request> updateRequest(
             @PathVariable Long id,
-            @RequestBody Request request) {
+            @Valid @RequestBody Request request) {
 
         Request existingRequest =
                 requestService.getRequestById(id);
