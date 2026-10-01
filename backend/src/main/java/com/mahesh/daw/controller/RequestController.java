@@ -69,6 +69,17 @@ public class RequestController {
         );
     }
 
+    // Submit a draft request
+    @PostMapping("/{id}/submit")
+    public ResponseEntity<Request> submitRequest(
+            @PathVariable Long id) {
+
+        Request submittedRequest =
+                requestService.submitRequest(id);
+
+        return ResponseEntity.ok(submittedRequest);
+    }
+
     // Update request
     @PutMapping("/{id}")
     public ResponseEntity<Request> updateRequest(
