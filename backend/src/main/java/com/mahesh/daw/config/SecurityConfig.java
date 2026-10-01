@@ -32,18 +32,28 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // Authentication endpoint
+                        // Login
                         .requestMatchers(
                                 "/api/auth/login"
                         ).permitAll()
 
-                        // User and role creation for now
+                        // User and role creation
                         .requestMatchers(
                                 "/api/users",
                                 "/api/roles"
                         ).permitAll()
 
-                        // Everything else requires JWT
+                        // Manager workflow operations
+                        .requestMatchers(
+                                "/api/workflow/*/manager/**"
+                        ).hasRole("MANAGER")
+
+                        // Admin workflow operations
+                        .requestMatchers(
+                                "/api/workflow/*/admin/**"
+                        ).hasRole("ADMIN")
+
+                        // Everything else requires authentication
                         .anyRequest().authenticated()
                 )
 
