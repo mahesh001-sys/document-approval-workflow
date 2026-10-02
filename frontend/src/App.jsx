@@ -1,6 +1,14 @@
 import React, { useState } from "react";
-import { Link, Route, Routes, useNavigate } from "react-router-dom";
+import {
+  Link,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate
+} from "react-router-dom";
+
 import authService from "./api/authService";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function Home() {
   return (
@@ -51,9 +59,7 @@ function Home() {
         <div className="feature-grid">
           <div className="feature-card">
             <div className="feature-icon">🔐</div>
-
             <h3>Secure Authentication</h3>
-
             <p>
               JWT-based authentication with Spring Security
               and role-based access control.
@@ -62,9 +68,7 @@ function Home() {
 
           <div className="feature-card">
             <div className="feature-icon">🔄</div>
-
             <h3>Multi-Level Approval</h3>
-
             <p>
               Requests move through Employee, Manager and
               Admin approval stages.
@@ -73,9 +77,7 @@ function Home() {
 
           <div className="feature-card">
             <div className="feature-icon">📋</div>
-
             <h3>Complete Tracking</h3>
-
             <p>
               Track request status, approval history,
               audit activity and workflow progress.
@@ -160,12 +162,26 @@ function Login() {
     try {
       setLoading(true);
 
-      await authService.login(
+      const data = await authService.login(
         email.trim(),
         password
       );
 
-      navigate("/dashboard");
+      const role =
+        data?.user?.role ||
+        data?.role ||
+        authService.getUser()?.role;
+
+      if (role === "ADMIN" || role === "ROLE_ADMIN") {
+        navigate("/admin");
+      } else if (
+        role === "MANAGER" ||
+        role === "ROLE_MANAGER"
+      ) {
+        navigate("/manager");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
       console.error("Login failed:", err);
 
@@ -263,7 +279,7 @@ function Login() {
   );
 }
 
-function Dashboard() {
+function EmployeeDashboard() {
   const navigate = useNavigate();
 
   const user = authService.getUser();
@@ -277,43 +293,94 @@ function Dashboard() {
     <div className="auth-page">
       <div className="auth-card">
         <span className="section-label">
-          DASHBOARD
+          EMPLOYEE DASHBOARD
         </span>
 
         <h1>Welcome!</h1>
 
         <p>
-          You are successfully authenticated.
+          Manage your business requests and track their
+          approval status.
         </p>
 
-        {user && (
-          <div
-            style={{
-              marginTop: "20px",
-              padding: "18px",
-              borderRadius: "12px",
-              background: "#f7f9fc",
-              border: "1px solid #eaecf0"
-            }}
-          >
-            <strong>User information</strong>
-
-            <p
-              style={{
-                marginTop: "10px",
-                color: "#667085"
-              }}
-            >
-              {user.email || "Authenticated user"}
-            </p>
-          </div>
+        {user?.email && (
+          <p>
+            Signed in as <strong>{user.email}</strong>
+          </p>
         )}
 
         <button
           type="button"
           className="button primary full"
           onClick={handleLogout}
-          style={{ marginTop: "24px" }}
+        >
+          Logout
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ManagerDashboard() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    authService.logout();
+    navigate("/login");
+  };
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <span className="section-label">
+          MANAGER DASHBOARD
+        </span>
+
+        <h1>Manager Workspace</h1>
+
+        <p>
+          Review submitted requests and manage approval
+          decisions.
+        </p>
+
+        <button
+          type="button"
+          className="button primary full"
+          onClick={handleLogout}
+        >
+          Logout
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AdminDashboard() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    authService.logout();
+    navigate("/login");
+  };
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <span className="section-label">
+          ADMIN DASHBOARD
+        </span>
+
+        <h1>Admin Workspace</h1>
+
+        <p>
+          Manage final approvals and monitor workflow
+          activity.
+        </p>
+
+        <button
+          type="button"
+          className="button primary full"
+          onClick={handleLogout}
         >
           Logout
         </button>
@@ -337,7 +404,34 @@ function App() {
 
       <Route
         path="/dashboard"
-        element={<Dashboard />}
+        element={
+          <ProtectedRoute>
+            <EmployeeDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/manager"
+        element={
+          <ProtectedRoute>
+            <ManagerDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="*"
+        element={<Navigate to="/" replace />}
       />
     </Routes>
   );
