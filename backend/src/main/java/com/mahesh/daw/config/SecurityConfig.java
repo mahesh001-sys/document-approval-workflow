@@ -29,13 +29,11 @@ public class SecurityConfig {
 
     private final RestAccessDeniedHandler restAccessDeniedHandler;
 
-    // BCrypt password encoder
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // Authentication manager used by AuthController during login
     @Bean
     public AuthenticationManager authenticationManager(
             AuthenticationConfiguration configuration)
@@ -58,6 +56,13 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
+
+                        // Swagger / OpenAPI
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**"
+                        ).permitAll()
 
                         // Login
                         .requestMatchers(
@@ -84,7 +89,6 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
-                // REST security error handling
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(
                                 restAuthenticationEntryPoint
