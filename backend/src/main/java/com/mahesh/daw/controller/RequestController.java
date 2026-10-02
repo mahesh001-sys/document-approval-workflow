@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,21 +24,27 @@ public class RequestController {
     public ResponseEntity<Request> createRequest(
             @Valid @RequestBody Request request) {
 
-        Request createdRequest = requestService.createRequest(request);
+        Request createdRequest =
+                requestService.createRequest(request);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(createdRequest);
     }
 
-    // Get request by ID
+    // Get request by ID - requester only
     @GetMapping("/{id}")
     public ResponseEntity<Request> getRequestById(
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            Authentication authentication) {
 
-        return ResponseEntity.ok(
-                requestService.getRequestById(id)
-        );
+        Request request =
+                requestService.getRequestByIdForEmail(
+                        id,
+                        authentication.getName()
+                );
+
+        return ResponseEntity.ok(request);
     }
 
     // Get request by request number
@@ -46,7 +53,9 @@ public class RequestController {
             @PathVariable String requestNumber) {
 
         return ResponseEntity.ok(
-                requestService.getRequestByNumber(requestNumber)
+                requestService.getRequestByNumber(
+                        requestNumber
+                )
         );
     }
 
@@ -69,40 +78,48 @@ public class RequestController {
         );
     }
 
-    // Submit a draft request
+    // Submit draft request - requester only
     @PostMapping("/{id}/submit")
     public ResponseEntity<Request> submitRequest(
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            Authentication authentication) {
 
         Request submittedRequest =
-                requestService.submitRequest(id);
+                requestService.submitRequestForUser(
+                        id,
+                        authentication.getName()
+                );
 
         return ResponseEntity.ok(submittedRequest);
     }
 
-    // Update request
+    // Update request - requester only
     @PutMapping("/{id}")
     public ResponseEntity<Request> updateRequest(
             @PathVariable Long id,
-            @Valid @RequestBody Request request) {
-
-        Request existingRequest =
-                requestService.getRequestById(id);
-
-        request.setId(existingRequest.getId());
+            @Valid @RequestBody Request request,
+            Authentication authentication) {
 
         Request updatedRequest =
-                requestService.updateRequest(request);
+                requestService.updateRequestForUser(
+                        id,
+                        request,
+                        authentication.getName()
+                );
 
         return ResponseEntity.ok(updatedRequest);
     }
 
-    // Delete request
+    // Delete request - requester only
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRequest(
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            Authentication authentication) {
 
-        requestService.deleteRequest(id);
+        requestService.deleteRequestForUser(
+                id,
+                authentication.getName()
+        );
 
         return ResponseEntity.noContent().build();
     }
