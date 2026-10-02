@@ -28,5 +28,22 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: document-approval-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/document_approval_workflow
+      SPRING_DATASOURCE_USERNAME: daw_user
+      SPRING_DATASOURCE_PASSWORD: daw_password
+      JWT_SECRET: change-this-development-secret
+    ports:
+      - "8080:8080"
+
 volumes:
   mysql_data:
