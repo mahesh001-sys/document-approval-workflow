@@ -9,6 +9,7 @@ import {
 
 import authService from "./api/authService";
 import ProtectedRoute from "./components/ProtectedRoute";
+import EmployeeDashboard from "./components/EmployeeDashboard";
 
 function Home() {
   return (
@@ -59,7 +60,9 @@ function Home() {
         <div className="feature-grid">
           <div className="feature-card">
             <div className="feature-icon">🔐</div>
+
             <h3>Secure Authentication</h3>
+
             <p>
               JWT-based authentication with Spring Security
               and role-based access control.
@@ -68,7 +71,9 @@ function Home() {
 
           <div className="feature-card">
             <div className="feature-icon">🔄</div>
+
             <h3>Multi-Level Approval</h3>
+
             <p>
               Requests move through Employee, Manager and
               Admin approval stages.
@@ -77,7 +82,9 @@ function Home() {
 
           <div className="feature-card">
             <div className="feature-icon">📋</div>
+
             <h3>Complete Tracking</h3>
+
             <p>
               Track request status, approval history,
               audit activity and workflow progress.
@@ -99,41 +106,32 @@ function Home() {
           <div className="workflow-step">
             <span>01</span>
             <h3>Create</h3>
-            <p>
-              Employee creates a business request.
-            </p>
+            <p>Employee creates a business request.</p>
           </div>
 
           <div className="workflow-step">
             <span>02</span>
             <h3>Review</h3>
-            <p>
-              Manager reviews the submitted request.
-            </p>
+            <p>Manager reviews the submitted request.</p>
           </div>
 
           <div className="workflow-step">
             <span>03</span>
             <h3>Approve</h3>
-            <p>
-              Admin provides final approval.
-            </p>
+            <p>Admin provides final approval.</p>
           </div>
 
           <div className="workflow-step">
             <span>04</span>
             <h3>Complete</h3>
-            <p>
-              The approved request is completed.
-            </p>
+            <p>The approved request is completed.</p>
           </div>
         </div>
       </section>
 
       <footer className="footer">
         <p>
-          © 2026 Document Approval Workflow ·
-          Built by Mahesh Kumar
+          © 2026 Document Approval Workflow · Built by Mahesh Kumar
         </p>
       </footer>
     </div>
@@ -230,9 +228,7 @@ function Login() {
         )}
 
         <form onSubmit={handleLogin}>
-          <label htmlFor="email">
-            Email
-          </label>
+          <label htmlFor="email">Email</label>
 
           <input
             id="email"
@@ -246,9 +242,7 @@ function Login() {
             disabled={loading}
           />
 
-          <label htmlFor="password">
-            Password
-          </label>
+          <label htmlFor="password">Password</label>
 
           <input
             id="password"
@@ -274,48 +268,6 @@ function Login() {
         <Link to="/" className="back-link">
           ← Back to Home
         </Link>
-      </div>
-    </div>
-  );
-}
-
-function EmployeeDashboard() {
-  const navigate = useNavigate();
-
-  const user = authService.getUser();
-
-  const handleLogout = () => {
-    authService.logout();
-    navigate("/login");
-  };
-
-  return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <span className="section-label">
-          EMPLOYEE DASHBOARD
-        </span>
-
-        <h1>Welcome!</h1>
-
-        <p>
-          Manage your business requests and track their
-          approval status.
-        </p>
-
-        {user?.email && (
-          <p>
-            Signed in as <strong>{user.email}</strong>
-          </p>
-        )}
-
-        <button
-          type="button"
-          className="button primary full"
-          onClick={handleLogout}
-        >
-          Logout
-        </button>
       </div>
     </div>
   );
@@ -373,8 +325,7 @@ function AdminDashboard() {
         <h1>Admin Workspace</h1>
 
         <p>
-          Manage final approvals and monitor workflow
-          activity.
+          Manage final approvals and monitor workflow activity.
         </p>
 
         <button
