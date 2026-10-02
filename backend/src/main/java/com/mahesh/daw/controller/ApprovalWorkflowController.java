@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +28,7 @@ public class ApprovalWorkflowController {
     }
 
     @PostMapping("/{requestId}/manager/review")
+    @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<Request> startManagerReview(
             @PathVariable @Positive Long requestId) {
 
@@ -36,11 +38,15 @@ public class ApprovalWorkflowController {
     }
 
     @PostMapping("/{requestId}/manager/approve")
+    @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<Request> approveManagerRequest(
             @PathVariable @Positive Long requestId,
             @RequestParam @Positive Long approverId,
             @RequestParam(required = false)
-            @Size(max = 1000, message = "Comments cannot exceed 1000 characters")
+            @Size(
+                    max = 1000,
+                    message = "Comments cannot exceed 1000 characters"
+            )
             String comments) {
 
         return ResponseEntity.ok(
@@ -53,6 +59,7 @@ public class ApprovalWorkflowController {
     }
 
     @PostMapping("/{requestId}/admin/review")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Request> startAdminReview(
             @PathVariable @Positive Long requestId) {
 
@@ -62,11 +69,15 @@ public class ApprovalWorkflowController {
     }
 
     @PostMapping("/{requestId}/admin/approve")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Request> approveAdminRequest(
             @PathVariable @Positive Long requestId,
             @RequestParam @Positive Long approverId,
             @RequestParam(required = false)
-            @Size(max = 1000, message = "Comments cannot exceed 1000 characters")
+            @Size(
+                    max = 1000,
+                    message = "Comments cannot exceed 1000 characters"
+            )
             String comments) {
 
         return ResponseEntity.ok(
@@ -78,12 +89,16 @@ public class ApprovalWorkflowController {
         );
     }
 
-    @PostMapping("/{requestId}/reject")
-    public ResponseEntity<Request> rejectRequest(
+    @PostMapping("/{requestId}/manager/reject")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<Request> managerRejectRequest(
             @PathVariable @Positive Long requestId,
             @RequestParam @Positive Long approverId,
             @RequestParam(required = false)
-            @Size(max = 1000, message = "Comments cannot exceed 1000 characters")
+            @Size(
+                    max = 1000,
+                    message = "Comments cannot exceed 1000 characters"
+            )
             String comments) {
 
         return ResponseEntity.ok(
@@ -95,12 +110,58 @@ public class ApprovalWorkflowController {
         );
     }
 
-    @PostMapping("/{requestId}/return")
-    public ResponseEntity<Request> returnRequest(
+    @PostMapping("/{requestId}/admin/reject")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Request> adminRejectRequest(
             @PathVariable @Positive Long requestId,
             @RequestParam @Positive Long approverId,
             @RequestParam(required = false)
-            @Size(max = 1000, message = "Comments cannot exceed 1000 characters")
+            @Size(
+                    max = 1000,
+                    message = "Comments cannot exceed 1000 characters"
+            )
+            String comments) {
+
+        return ResponseEntity.ok(
+                approvalWorkflowService.rejectRequest(
+                        requestId,
+                        approverId,
+                        comments
+                )
+        );
+    }
+
+    @PostMapping("/{requestId}/manager/return")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<Request> managerReturnRequest(
+            @PathVariable @Positive Long requestId,
+            @RequestParam @Positive Long approverId,
+            @RequestParam(required = false)
+            @Size(
+                    max = 1000,
+                    message = "Comments cannot exceed 1000 characters"
+            )
+            String comments) {
+
+        return ResponseEntity.ok(
+                approvalWorkflowService.returnRequest(
+                        requestId,
+                        approverId,
+                        comments
+                )
+        );
+    }
+
+    @PostMapping("/{requestId}/admin/return")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Request> adminReturnRequest(
+            @PathVariable @Positive Long requestId,
+            @RequestParam @Positive Long approverId,
+            @RequestParam(required = false)
+            @Size(
+                    max = 1000,
+                    message = "Comments cannot exceed 1000 characters"
+            )
             String comments) {
 
         return ResponseEntity.ok(
