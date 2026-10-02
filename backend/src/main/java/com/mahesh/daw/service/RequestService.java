@@ -7,7 +7,6 @@ import com.mahesh.daw.repository.RequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -45,12 +44,24 @@ public class RequestService {
                 );
     }
 
+    public Request getRequestByIdForUser(
+            Long id,
+            User user) {
+
+        Request request = getRequestById(id);
+
+        validateOwnership(request, user);
+
+        return request;
+    }
+
     public Request getRequestByNumber(String requestNumber) {
 
         return requestRepository.findByRequestNumber(requestNumber)
                 .orElseThrow(() ->
                         new IllegalArgumentException(
-                                "Request not found: " + requestNumber
+                                "Request not found: "
+                                        + requestNumber
                         )
                 );
     }
@@ -63,7 +74,9 @@ public class RequestService {
         return requestRepository.findByRequester(requester);
     }
 
-    public List<Request> getRequestsByStatus(RequestStatus status) {
+    public List<Request> getRequestsByStatus(
+            RequestStatus status) {
+
         return requestRepository.findByStatus(status);
     }
 
@@ -88,23 +101,21 @@ public class RequestService {
         requestRepository.delete(request);
     }
 
-    // Submit a draft request
-    public Request submitRequest(Long id) {
+    private void validateOwnership(
+            Request request,
+            User user) {
 
-        Request request = getRequestById(id);
+        if (request.getRequester() == null
+                || user == null
+                || request.getRequester().getId() == null
+                || user.getId() == null
+                || !request.getRequester()
+                        .getId()
+                        .equals(user.getId())) {
 
-        if (request.getStatus() != RequestStatus.DRAFT) {
-            throw new IllegalArgumentException(
-                    "Only DRAFT requests can be submitted"
+            throw new SecurityException(
+                    "You are not authorized to access this request"
             );
         }
-
-        request.setStatus(RequestStatus.SUBMITTED);
-
-        request.setSubmittedAt(
-                LocalDateTime.now()
-        );
-
-        return requestRepository.save(request);
     }
 }
