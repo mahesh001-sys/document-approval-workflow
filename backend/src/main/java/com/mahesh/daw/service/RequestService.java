@@ -90,6 +90,21 @@ public class RequestService {
         );
     }
 
+    public Request submitRequest(Long id) {
+
+        Request request = getRequestById(id);
+
+        if (request.getStatus() != RequestStatus.DRAFT) {
+            throw new IllegalStateException(
+                    "Only DRAFT requests can be submitted"
+            );
+        }
+
+        request.setStatus(RequestStatus.SUBMITTED);
+
+        return requestRepository.save(request);
+    }
+
     public Request updateRequest(Request request) {
         return requestRepository.save(request);
     }
