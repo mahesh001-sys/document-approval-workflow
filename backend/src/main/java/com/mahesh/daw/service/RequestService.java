@@ -56,6 +56,26 @@ public class RequestService {
         return request;
     }
 
+    public Request getRequestByIdForEmail(
+            Long id,
+            String email) {
+
+        Request request = getRequestById(id);
+
+        if (request.getRequester() == null
+                || request.getRequester().getEmail() == null
+                || !request.getRequester()
+                        .getEmail()
+                        .equalsIgnoreCase(email)) {
+
+            throw new SecurityException(
+                    "You are not authorized to access this request"
+            );
+        }
+
+        return request;
+    }
+
     public Request getRequestByNumber(String requestNumber) {
 
         return requestRepository.findByRequestNumber(requestNumber)
@@ -107,13 +127,64 @@ public class RequestService {
         return requestRepository.save(request);
     }
 
+    public Request submitRequestForUser(
+            Long id,
+            String email) {
+
+        Request request =
+                getRequestByIdForEmail(id, email);
+
+        if (request.getStatus() != RequestStatus.DRAFT) {
+            throw new IllegalArgumentException(
+                    "Only DRAFT requests can be submitted"
+            );
+        }
+
+        request.setStatus(RequestStatus.SUBMITTED);
+        request.setSubmittedAt(LocalDateTime.now());
+
+        return requestRepository.save(request);
+    }
+
     public Request updateRequest(Request request) {
         return requestRepository.save(request);
+    }
+
+    public Request updateRequestForUser(
+            Long id,
+            Request updatedRequest,
+            String email) {
+
+        Request existingRequest =
+                getRequestByIdForEmail(id, email);
+
+        existingRequest.setTitle(updatedRequest.getTitle());
+        existingRequest.setDescription(
+                updatedRequest.getDescription()
+        );
+        existingRequest.setPriority(
+                updatedRequest.getPriority()
+        );
+        existingRequest.setRequestType(
+                updatedRequest.getRequestType()
+        );
+
+        return requestRepository.save(existingRequest);
     }
 
     public void deleteRequest(Long id) {
 
         Request request = getRequestById(id);
+
+        requestRepository.delete(request);
+    }
+
+    public void deleteRequestForUser(
+            Long id,
+            String email) {
+
+        Request request =
+                getRequestByIdForEmail(id, email);
 
         requestRepository.delete(request);
     }
