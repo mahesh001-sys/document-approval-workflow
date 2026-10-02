@@ -95,14 +95,19 @@ public class RequestService {
         Request request = getRequestById(id);
 
         if (request.getStatus() != RequestStatus.DRAFT) {
-            throw new IllegalStateException(
+            throw new IllegalArgumentException(
                     "Only DRAFT requests can be submitted"
             );
         }
 
         request.setStatus(RequestStatus.SUBMITTED);
 
-        return requestRepository.save(request);
+        Request savedRequest =
+                requestRepository.save(request);
+
+        return savedRequest != null
+                ? savedRequest
+                : request;
     }
 
     public Request updateRequest(Request request) {
