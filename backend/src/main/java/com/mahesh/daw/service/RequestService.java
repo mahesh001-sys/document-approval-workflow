@@ -7,6 +7,7 @@ import com.mahesh.daw.repository.RequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -101,13 +102,9 @@ public class RequestService {
         }
 
         request.setStatus(RequestStatus.SUBMITTED);
+        request.setSubmittedAt(LocalDateTime.now());
 
-        Request savedRequest =
-                requestRepository.save(request);
-
-        return savedRequest != null
-                ? savedRequest
-                : request;
+        return requestRepository.save(request);
     }
 
     public Request updateRequest(Request request) {
