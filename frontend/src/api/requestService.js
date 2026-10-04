@@ -11,7 +11,9 @@ const requestService = {
   },
 
   async getAllRequests() {
-    const response = await axiosClient.get("/requests");
+    const response = await axiosClient.get(
+      "/requests"
+    );
 
     return response.data;
   },
@@ -58,7 +60,78 @@ const requestService = {
   },
 
   async deleteRequest(id) {
-    await axiosClient.delete(`/requests/${id}`);
+    await axiosClient.delete(
+      `/requests/${id}`
+    );
+  },
+
+  // Start manager review
+  async startManagerReview(requestId) {
+    const response = await axiosClient.post(
+      `/workflow/${requestId}/manager/review`
+    );
+
+    return response.data;
+  },
+
+  // Manager approve
+  async approveManagerRequest(
+    requestId,
+    approverId,
+    comments
+  ) {
+    const response = await axiosClient.post(
+      `/workflow/${requestId}/manager/approve`,
+      null,
+      {
+        params: {
+          approverId,
+          comments
+        }
+      }
+    );
+
+    return response.data;
+  },
+
+  // Manager reject
+  async rejectManagerRequest(
+    requestId,
+    approverId,
+    comments
+  ) {
+    const response = await axiosClient.post(
+      `/workflow/${requestId}/manager/reject`,
+      null,
+      {
+        params: {
+          approverId,
+          comments
+        }
+      }
+    );
+
+    return response.data;
+  },
+
+  // Manager return for changes
+  async returnManagerRequest(
+    requestId,
+    approverId,
+    comments
+  ) {
+    const response = await axiosClient.post(
+      `/workflow/${requestId}/manager/return`,
+      null,
+      {
+        params: {
+          approverId,
+          comments
+        }
+      }
+    );
+
+    return response.data;
   }
 };
 
