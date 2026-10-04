@@ -240,6 +240,20 @@ function RequestDetails() {
           {request?.status === "DRAFT" && (
             <button
               type="button"
+              className="button secondary"
+              onClick={() =>
+                navigate(
+                  `/requests/${request.id}/edit`
+                )
+              }
+            >
+              Edit Draft
+            </button>
+          )}
+
+          {request?.status === "DRAFT" && (
+            <button
+              type="button"
               className="button primary"
               onClick={handleSubmitRequest}
               disabled={submitting}
