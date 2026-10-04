@@ -10,6 +10,7 @@ import {
 import authService from "./api/authService";
 import ProtectedRoute from "./components/ProtectedRoute";
 import EmployeeDashboard from "./components/EmployeeDashboard";
+import ManagerDashboard from "./components/ManagerDashboard";
 import CreateRequest from "./components/CreateRequest";
 import RequestDetails from "./components/RequestDetails";
 import EditRequest from "./components/EditRequest";
@@ -293,40 +294,6 @@ function Login() {
         <Link to="/" className="back-link">
           ← Back to Home
         </Link>
-      </div>
-    </div>
-  );
-}
-
-function ManagerDashboard() {
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    authService.logout();
-    navigate("/login");
-  };
-
-  return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <span className="section-label">
-          MANAGER DASHBOARD
-        </span>
-
-        <h1>Manager Workspace</h1>
-
-        <p>
-          Review submitted requests and manage approval
-          decisions.
-        </p>
-
-        <button
-          type="button"
-          className="button primary full"
-          onClick={handleLogout}
-        >
-          Logout
-        </button>
       </div>
     </div>
   );
