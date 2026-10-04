@@ -12,6 +12,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import EmployeeDashboard from "./components/EmployeeDashboard";
 import CreateRequest from "./components/CreateRequest";
 import RequestDetails from "./components/RequestDetails";
+import EditRequest from "./components/EditRequest";
 
 function Home() {
   return (
@@ -38,7 +39,10 @@ function Home() {
               Get Started
             </Link>
 
-            <a href="#features" className="button secondary">
+            <a
+              href="#features"
+              className="button secondary"
+            >
               Explore Features
             </a>
           </div>
@@ -163,7 +167,9 @@ function Login() {
     setError("");
 
     if (!email.trim() || !password.trim()) {
-      setError("Please enter your email and password.");
+      setError(
+        "Please enter your email and password."
+      );
       return;
     }
 
@@ -363,19 +369,16 @@ function AdminDashboard() {
 function App() {
   return (
     <Routes>
-      {/* Public Home */}
       <Route
         path="/"
         element={<Home />}
       />
 
-      {/* Login */}
       <Route
         path="/login"
         element={<Login />}
       />
 
-      {/* Employee Dashboard */}
       <Route
         path="/dashboard"
         element={
@@ -385,7 +388,6 @@ function App() {
         }
       />
 
-      {/* Create Request */}
       <Route
         path="/requests/new"
         element={
@@ -395,7 +397,6 @@ function App() {
         }
       />
 
-      {/* Request Details */}
       <Route
         path="/requests/:id"
         element={
@@ -405,7 +406,15 @@ function App() {
         }
       />
 
-      {/* Manager Dashboard */}
+      <Route
+        path="/requests/:id/edit"
+        element={
+          <ProtectedRoute>
+            <EditRequest />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/manager"
         element={
@@ -415,7 +424,6 @@ function App() {
         }
       />
 
-      {/* Admin Dashboard */}
       <Route
         path="/admin"
         element={
@@ -425,7 +433,6 @@ function App() {
         }
       />
 
-      {/* Unknown URL */}
       <Route
         path="*"
         element={
