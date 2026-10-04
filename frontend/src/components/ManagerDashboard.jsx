@@ -8,9 +8,20 @@ function ManagerDashboard() {
 
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] =
+    useState(false);
+
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const [selectedRequest, setSelectedRequest] =
+    useState(null);
+
+  const [comments, setComments] = useState("");
 
   const user = authService.getUser();
+
+  const approverId = user?.id;
 
   const loadRequests = async () => {
     try {
@@ -59,6 +70,238 @@ function ManagerDashboard() {
   const handleLogout = () => {
     authService.logout();
     navigate("/login");
+  };
+
+  const handleStartReview = async (requestId) => {
+    try {
+      setActionLoading(true);
+      setError("");
+      setMessage("");
+
+      const updatedRequest =
+        await requestService.startManagerReview(
+          requestId
+        );
+
+      setRequests((previous) =>
+        previous.map((request) =>
+          request.id === requestId
+            ? updatedRequest
+            : request
+        )
+      );
+
+      setSelectedRequest(
+        updatedRequest
+      );
+
+      setMessage(
+        "Request moved to Manager Review."
+      );
+    } catch (err) {
+      console.error(
+        "Failed to start manager review:",
+        err
+      );
+
+      if (err.response?.data?.message) {
+        setError(
+          err.response.data.message
+        );
+      } else {
+        setError(
+          "Unable to start manager review."
+        );
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!selectedRequest) {
+      return;
+    }
+
+    if (!approverId) {
+      setError(
+        "Manager user ID was not found. Please log in again."
+      );
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      setError("");
+      setMessage("");
+
+      const updatedRequest =
+        await requestService.approveManagerRequest(
+          selectedRequest.id,
+          approverId,
+          comments.trim()
+        );
+
+      setRequests((previous) =>
+        previous.filter(
+          (request) =>
+            request.id !==
+            selectedRequest.id
+        )
+      );
+
+      setSelectedRequest(null);
+      setComments("");
+
+      setMessage(
+        "Request approved successfully."
+      );
+    } catch (err) {
+      console.error(
+        "Failed to approve request:",
+        err
+      );
+
+      if (err.response?.data?.message) {
+        setError(
+          err.response.data.message
+        );
+      } else {
+        setError(
+          "Unable to approve the request."
+        );
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedRequest) {
+      return;
+    }
+
+    if (!approverId) {
+      setError(
+        "Manager user ID was not found. Please log in again."
+      );
+      return;
+    }
+
+    if (!comments.trim()) {
+      setError(
+        "Please provide a comment before rejecting the request."
+      );
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      setError("");
+      setMessage("");
+
+      await requestService.rejectManagerRequest(
+        selectedRequest.id,
+        approverId,
+        comments.trim()
+      );
+
+      setRequests((previous) =>
+        previous.filter(
+          (request) =>
+            request.id !==
+            selectedRequest.id
+        )
+      );
+
+      setSelectedRequest(null);
+      setComments("");
+
+      setMessage(
+        "Request rejected successfully."
+      );
+    } catch (err) {
+      console.error(
+        "Failed to reject request:",
+        err
+      );
+
+      if (err.response?.data?.message) {
+        setError(
+          err.response.data.message
+        );
+      } else {
+        setError(
+          "Unable to reject the request."
+        );
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReturn = async () => {
+    if (!selectedRequest) {
+      return;
+    }
+
+    if (!approverId) {
+      setError(
+        "Manager user ID was not found. Please log in again."
+      );
+      return;
+    }
+
+    if (!comments.trim()) {
+      setError(
+        "Please provide a comment before returning the request."
+      );
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      setError("");
+      setMessage("");
+
+      await requestService.returnManagerRequest(
+        selectedRequest.id,
+        approverId,
+        comments.trim()
+      );
+
+      setRequests((previous) =>
+        previous.filter(
+          (request) =>
+            request.id !==
+            selectedRequest.id
+        )
+      );
+
+      setSelectedRequest(null);
+      setComments("");
+
+      setMessage(
+        "Request returned to the employee for changes."
+      );
+    } catch (err) {
+      console.error(
+        "Failed to return request:",
+        err
+      );
+
+      if (err.response?.data?.message) {
+        setError(
+          err.response.data.message
+        );
+      } else {
+        setError(
+          "Unable to return the request."
+        );
+      }
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const getStatusClass = (status) => {
@@ -119,6 +362,7 @@ function ManagerDashboard() {
             type="button"
             className="button secondary"
             onClick={loadRequests}
+            disabled={loading || actionLoading}
           >
             Refresh
           </button>
@@ -127,6 +371,7 @@ function ManagerDashboard() {
             type="button"
             className="button secondary"
             onClick={handleLogout}
+            disabled={actionLoading}
           >
             Logout
           </button>
@@ -171,6 +416,34 @@ function ManagerDashboard() {
 
         </section>
 
+        {message && (
+          <div
+            style={{
+              marginBottom: "20px",
+              padding: "14px",
+              borderRadius: "8px",
+              background: "#ecfdf3",
+              color: "#027a48"
+            }}
+          >
+            {message}
+          </div>
+        )}
+
+        {error && (
+          <div
+            style={{
+              marginBottom: "20px",
+              padding: "14px",
+              borderRadius: "8px",
+              background: "#fef3f2",
+              color: "#b42318"
+            }}
+          >
+            {error}
+          </div>
+        )}
+
         <section className="requests-section">
 
           <div className="section-heading">
@@ -199,22 +472,6 @@ function ManagerDashboard() {
             </div>
           )}
 
-          {!loading && error && (
-            <div className="error-state">
-
-              <p>{error}</p>
-
-              <button
-                type="button"
-                className="button secondary"
-                onClick={loadRequests}
-              >
-                Try Again
-              </button>
-
-            </div>
-          )}
-
           {!loading &&
             !error &&
             requests.length === 0 && (
@@ -237,7 +494,6 @@ function ManagerDashboard() {
             )}
 
           {!loading &&
-            !error &&
             requests.length > 0 && (
               <div className="request-table-wrapper">
 
@@ -294,9 +550,12 @@ function ManagerDashboard() {
                             <button
                               type="button"
                               className="table-button"
+                              disabled={
+                                actionLoading
+                              }
                               onClick={() =>
-                                navigate(
-                                  `/requests/${request.id}`
+                                setSelectedRequest(
+                                  request
                                 )
                               }
                             >
@@ -317,6 +576,231 @@ function ManagerDashboard() {
             )}
 
         </section>
+
+        {selectedRequest && (
+          <section
+            className="requests-section"
+            style={{
+              marginTop: "30px"
+            }}
+          >
+
+            <div className="section-heading">
+
+              <span className="section-label">
+                REQUEST REVIEW
+              </span>
+
+              <h2>
+                {selectedRequest.title ||
+                  "Request Details"}
+              </h2>
+
+              <p>
+                Request #
+                {selectedRequest.requestNumber ||
+                  selectedRequest.id}
+              </p>
+
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gap: "18px",
+                marginBottom: "24px"
+              }}
+            >
+
+              <div>
+                <strong>
+                  Description
+                </strong>
+
+                <p
+                  style={{
+                    marginTop: "6px",
+                    lineHeight: "1.7",
+                    whiteSpace: "pre-wrap"
+                  }}
+                >
+                  {selectedRequest.description ||
+                    "-"}
+                </p>
+              </div>
+
+              <div>
+                <strong>
+                  Request Type
+                </strong>
+
+                <p
+                  style={{
+                    marginTop: "6px"
+                  }}
+                >
+                  {selectedRequest.requestType ||
+                    "-"}
+                </p>
+              </div>
+
+              <div>
+                <strong>
+                  Current Status
+                </strong>
+
+                <p
+                  style={{
+                    marginTop: "8px"
+                  }}
+                >
+                  <span
+                    className={getStatusClass(
+                      selectedRequest.status
+                    )}
+                  >
+                    {getStatusLabel(
+                      selectedRequest.status
+                    )}
+                  </span>
+                </p>
+              </div>
+
+            </div>
+
+            {selectedRequest.status ===
+              "SUBMITTED" && (
+              <div
+                style={{
+                  marginBottom: "24px"
+                }}
+              >
+
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() =>
+                    handleStartReview(
+                      selectedRequest.id
+                    )
+                  }
+                  disabled={actionLoading}
+                >
+                  {actionLoading
+                    ? "Processing..."
+                    : "Start Manager Review"}
+                </button>
+
+              </div>
+            )}
+
+            {selectedRequest.status ===
+              "MANAGER_REVIEW" && (
+              <>
+
+                <label htmlFor="manager-comments">
+                  Comments
+                </label>
+
+                <textarea
+                  id="manager-comments"
+                  value={comments}
+                  onChange={(event) =>
+                    setComments(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Enter review comments..."
+                  maxLength={1000}
+                  rows={5}
+                  disabled={actionLoading}
+                  style={{
+                    width: "100%",
+                    padding: "14px",
+                    border:
+                      "1px solid #d0d5dd",
+                    borderRadius: "9px",
+                    resize: "vertical",
+                    marginTop: "8px"
+                  }}
+                />
+
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: "#667085",
+                    marginTop: "6px"
+                  }}
+                >
+                  Maximum 1000 characters.
+                </p>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "12px",
+                    flexWrap: "wrap",
+                    marginTop: "20px"
+                  }}
+                >
+
+                  <button
+                    type="button"
+                    className="button primary"
+                    onClick={handleApprove}
+                    disabled={actionLoading}
+                  >
+                    {actionLoading
+                      ? "Processing..."
+                      : "Approve"}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={handleReturn}
+                    disabled={actionLoading}
+                  >
+                    Return for Changes
+                  </button>
+
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={handleReject}
+                    disabled={actionLoading}
+                  >
+                    Reject
+                  </button>
+
+                </div>
+
+              </>
+            )}
+
+            <div
+              style={{
+                marginTop: "20px"
+              }}
+            >
+
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => {
+                  setSelectedRequest(null);
+                  setComments("");
+                  setError("");
+                }}
+                disabled={actionLoading}
+              >
+                Close Review
+              </button>
+
+            </div>
+
+          </section>
+        )}
 
         <section className="workflow">
 
