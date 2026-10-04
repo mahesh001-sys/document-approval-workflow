@@ -10,6 +10,7 @@ import {
 import authService from "./api/authService";
 import ProtectedRoute from "./components/ProtectedRoute";
 import EmployeeDashboard from "./components/EmployeeDashboard";
+import CreateRequest from "./components/CreateRequest";
 
 function Home() {
   return (
@@ -60,9 +61,7 @@ function Home() {
         <div className="feature-grid">
           <div className="feature-card">
             <div className="feature-icon">🔐</div>
-
             <h3>Secure Authentication</h3>
-
             <p>
               JWT-based authentication with Spring Security
               and role-based access control.
@@ -71,9 +70,7 @@ function Home() {
 
           <div className="feature-card">
             <div className="feature-icon">🔄</div>
-
             <h3>Multi-Level Approval</h3>
-
             <p>
               Requests move through Employee, Manager and
               Admin approval stages.
@@ -82,9 +79,7 @@ function Home() {
 
           <div className="feature-card">
             <div className="feature-icon">📋</div>
-
             <h3>Complete Tracking</h3>
-
             <p>
               Track request status, approval history,
               audit activity and workflow progress.
@@ -358,6 +353,15 @@ function App() {
         element={
           <ProtectedRoute>
             <EmployeeDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/requests/new"
+        element={
+          <ProtectedRoute>
+            <CreateRequest />
           </ProtectedRoute>
         }
       />
