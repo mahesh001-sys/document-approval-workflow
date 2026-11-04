@@ -1,6 +1,7 @@
 package com.mahesh.daw.controller;
 
 import com.mahesh.daw.dto.AuthRequest;
+import com.mahesh.daw.dto.AuthResponse;
 import com.mahesh.daw.security.JwtService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,7 +22,7 @@ public class AuthController {
     private final JwtService jwtService;
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(
+    public ResponseEntity<AuthResponse> login(
             @Valid @RequestBody AuthRequest request) {
 
         Authentication authentication =
@@ -30,12 +33,18 @@ public class AuthController {
                         )
                 );
 
-        String token =
-                jwtService.generateToken(
-                        (org.springframework.security.core.userdetails.UserDetails)
-                                authentication.getPrincipal()
-                );
+        UserDetails userDetails =
+                (UserDetails) authentication.getPrincipal();
 
-        return ResponseEntity.ok(token);
+        String token = jwtService.generateToken(userDetails);
+
+        String role = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(authority -> authority.startsWith("ROLE_"))
+                .map(authority -> authority.substring("ROLE_".length()))
+                .findFirst()
+                .orElse("USER");
+
+        return ResponseEntity.ok(new AuthResponse(token, role));
     }
 }
