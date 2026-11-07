@@ -1,5 +1,7 @@
 package com.mahesh.daw.controller;
 
+import com.mahesh.daw.dto.UserRegistrationRequest;
+import com.mahesh.daw.dto.UserResponse;
 import com.mahesh.daw.entity.User;
 import com.mahesh.daw.service.UserService;
 import jakarta.validation.Valid;
@@ -17,45 +19,48 @@ public class UserController {
 
     private final UserService userService;
 
-    // Create a new user
+    // Public registration: the server assigns the USER role.
     @PostMapping
-    public ResponseEntity<User> createUser(
-            @Valid @RequestBody User user) {
+    public ResponseEntity<UserResponse> createUser(
+            @Valid @RequestBody UserRegistrationRequest request) {
 
-        User createdUser = userService.createUser(user);
+        User createdUser = userService.createUser(request);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(createdUser);
+                .body(toResponse(createdUser));
     }
 
     // Get user by ID
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(
+    public ResponseEntity<UserResponse> getUserById(
             @PathVariable Long id) {
 
         return ResponseEntity.ok(
-                userService.getUserById(id)
+                toResponse(userService.getUserById(id))
         );
     }
 
     // Get user by email
     @GetMapping("/email/{email}")
-    public ResponseEntity<User> getUserByEmail(
+    public ResponseEntity<UserResponse> getUserByEmail(
             @PathVariable String email) {
 
         return ResponseEntity.ok(
-                userService.getUserByEmail(email)
+                toResponse(userService.getUserByEmail(email))
         );
     }
 
     // Get all users
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
+    public ResponseEntity<List<UserResponse>> getAllUsers() {
 
-        return ResponseEntity.ok(
-                userService.getAllUsers()
-        );
+        List<UserResponse> users = userService.getAllUsers()
+                .stream()
+                .map(UserController::toResponse)
+                .toList();
+
+        return ResponseEntity.ok(users);
     }
 
     // Check whether an email already exists
@@ -65,6 +70,19 @@ public class UserController {
 
         return ResponseEntity.ok(
                 userService.existsByEmail(email)
+        );
+    }
+
+    private static UserResponse toResponse(User user) {
+        return new UserResponse(
+                user.getId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail(),
+                user.getRole().getName(),
+                user.getActive(),
+                user.getCreatedAt(),
+                user.getUpdatedAt()
         );
     }
 }

@@ -1,6 +1,17 @@
 import axiosClient from "./axiosClient";
 
 const authService = {
+  async register(firstName, lastName, email, password) {
+    const response = await axiosClient.post("/users", {
+      firstName,
+      lastName,
+      email,
+      password
+    });
+
+    return response.data;
+  },
+
   async login(email, password) {
     const response = await axiosClient.post("/auth/login", {
       email,

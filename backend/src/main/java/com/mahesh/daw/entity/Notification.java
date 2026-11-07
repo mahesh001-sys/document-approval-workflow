@@ -41,6 +41,7 @@ public class Notification {
     private String message;
 
     @Column(name = "read_status", nullable = false)
+    @Builder.Default
     private Boolean readStatus = false;
 
     @Column(name = "created_at", nullable = false)

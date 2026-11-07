@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Link,
   Navigate,
@@ -14,6 +14,7 @@ import ManagerDashboard from "./components/ManagerDashboard";
 import CreateRequest from "./components/CreateRequest";
 import RequestDetails from "./components/RequestDetails";
 import EditRequest from "./components/EditRequest";
+import Register from "./components/Register";
 
 function Home() {
   return (
@@ -291,6 +292,11 @@ function Login() {
           </button>
         </form>
 
+        <p style={{ marginTop: "20px", textAlign: "center" }}>
+          Don&apos;t have an account?{" "}
+          <Link to="/register">Create an account</Link>
+        </p>
+
         <Link to="/" className="back-link">
           ← Back to Home
         </Link>
@@ -344,6 +350,11 @@ function App() {
       <Route
         path="/login"
         element={<Login />}
+      />
+
+      <Route
+        path="/register"
+        element={<Register />}
       />
 
       <Route

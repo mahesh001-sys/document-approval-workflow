@@ -1,6 +1,7 @@
 package com.mahesh.daw.service;
 
 import com.mahesh.daw.entity.*;
+import com.mahesh.daw.exception.WorkflowConflictException;
 import com.mahesh.daw.repository.RequestRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -108,7 +109,7 @@ class ApprovalWorkflowServiceTest {
                 .thenReturn(request);
 
         assertThrows(
-                IllegalStateException.class,
+                WorkflowConflictException.class,
                 () -> approvalWorkflowService.startManagerReview(1L)
         );
 

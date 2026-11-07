@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import authService from "../api/authService";
 import requestService from "../api/requestService";
@@ -8,6 +8,7 @@ function ManagerDashboard() {
 
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
   const [actionLoading, setActionLoading] =
     useState(false);
 
@@ -23,49 +24,56 @@ function ManagerDashboard() {
 
   const approverId = user?.id;
 
-  const loadRequests = async () => {
-    try {
-      setLoading(true);
-      setError("");
 
-      const data =
-        await requestService.getAllRequests();
-
-      const managerRequests =
-        Array.isArray(data)
-          ? data.filter(
-              (request) =>
-                request.status ===
-                  "SUBMITTED" ||
-                request.status ===
-                  "MANAGER_REVIEW"
-            )
-          : [];
-
-      setRequests(managerRequests);
-    } catch (err) {
-      console.error(
-        "Failed to load manager requests:",
-        err
-      );
-
-      if (err.response?.status === 401) {
-        authService.logout();
-        navigate("/login");
-        return;
-      }
-
-      setError(
-        "Unable to load requests. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    loadRequests();
-  }, []);
+    let isActive = true;
+
+    requestService
+      .getAllRequests()
+      .then((data) => {
+        if (!isActive) return;
+
+        const managerRequests =
+          Array.isArray(data)
+            ? data.filter(
+                (request) =>
+                  request.status === "SUBMITTED" ||
+                  request.status === "MANAGER_REVIEW"
+              )
+            : [];
+
+        setError("");
+        setRequests(managerRequests);
+      })
+      .catch((err) => {
+        if (!isActive) return;
+
+        console.error(
+          "Failed to load manager requests:",
+          err
+        );
+
+        if (err.response?.status === 401) {
+          authService.logout();
+          navigate("/login");
+          return;
+        }
+
+        setError(
+          "Unable to load requests. Please try again."
+        );
+      })
+      .finally(() => {
+        if (isActive) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [navigate, reloadKey]);
 
   const handleLogout = () => {
     authService.logout();
@@ -135,8 +143,7 @@ function ManagerDashboard() {
       setError("");
       setMessage("");
 
-      const updatedRequest =
-        await requestService.approveManagerRequest(
+      await requestService.approveManagerRequest(
           selectedRequest.id,
           approverId,
           comments.trim()
@@ -361,7 +368,7 @@ function ManagerDashboard() {
           <button
             type="button"
             className="button secondary"
-            onClick={loadRequests}
+            onClick={() => setReloadKey((current) => current + 1)}
             disabled={loading || actionLoading}
           >
             Refresh

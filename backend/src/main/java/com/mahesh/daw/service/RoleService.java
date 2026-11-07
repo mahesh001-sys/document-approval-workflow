@@ -1,6 +1,8 @@
 package com.mahesh.daw.service;
 
 import com.mahesh.daw.entity.Role;
+import com.mahesh.daw.exception.DuplicateResourceException;
+import com.mahesh.daw.exception.ResourceNotFoundException;
 import com.mahesh.daw.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,7 +18,7 @@ public class RoleService {
     public Role createRole(Role role) {
 
         if (roleRepository.existsByName(role.getName())) {
-            throw new IllegalArgumentException(
+            throw new DuplicateResourceException(
                     "Role already exists: " + role.getName()
             );
         }
@@ -28,7 +30,7 @@ public class RoleService {
 
         return roleRepository.findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new ResourceNotFoundException(
                                 "Role not found with id: " + id
                         )
                 );
@@ -38,7 +40,7 @@ public class RoleService {
 
         return roleRepository.findByName(name)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new ResourceNotFoundException(
                                 "Role not found: " + name
                         )
                 );

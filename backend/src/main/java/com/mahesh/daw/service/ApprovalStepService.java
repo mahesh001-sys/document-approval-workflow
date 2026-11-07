@@ -1,6 +1,8 @@
 package com.mahesh.daw.service;
 
 import com.mahesh.daw.entity.ApprovalStatus;
+import com.mahesh.daw.exception.DuplicateResourceException;
+import com.mahesh.daw.exception.ResourceNotFoundException;
 import com.mahesh.daw.entity.ApprovalStep;
 import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.entity.User;
@@ -22,7 +24,7 @@ public class ApprovalStepService {
                 approvalStep.getRequest(),
                 approvalStep.getStepNumber())) {
 
-            throw new IllegalArgumentException(
+            throw new DuplicateResourceException(
                     "Approval step already exists for request: "
                             + approvalStep.getRequest().getId()
                             + " and step number: "
@@ -41,7 +43,7 @@ public class ApprovalStepService {
 
         return approvalStepRepository.findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new ResourceNotFoundException(
                                 "Approval step not found with id: " + id
                         )
                 );
@@ -68,7 +70,7 @@ public class ApprovalStepService {
         return approvalStepRepository
                 .findByRequestAndStepNumber(request, stepNumber)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new ResourceNotFoundException(
                                 "Approval step not found for request: "
                                         + request.getId()
                                         + " and step: "

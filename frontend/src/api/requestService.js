@@ -1,6 +1,14 @@
 import axiosClient from "./axiosClient";
 
 const requestService = {
+  async getActiveRequestTypes() {
+    const response = await axiosClient.get(
+      "/request-types/active"
+    );
+
+    return response.data;
+  },
+
   async createRequest(request) {
     const response = await axiosClient.post(
       "/requests",
@@ -15,6 +23,11 @@ const requestService = {
       "/requests"
     );
 
+    return response.data;
+  },
+
+  async getMyRequests() {
+    const response = await axiosClient.get("/requests/my");
     return response.data;
   },
 

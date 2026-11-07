@@ -1,5 +1,6 @@
 package com.mahesh.daw.exception;
 
+import org.springframework.security.authentication.BadCredentialsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -18,20 +19,54 @@ public class GlobalExceptionHandler {
     private static final Logger logger =
             LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(
+            ResourceNotFoundException exception) {
+
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage()
+        );
+    }
+
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicate(
+            DuplicateResourceException exception) {
+
+        return buildErrorResponse(
+                HttpStatus.CONFLICT,
+                exception.getMessage()
+        );
+    }
+
+    @ExceptionHandler(WorkflowConflictException.class)
+    public ResponseEntity<ErrorResponse> handleWorkflowConflict(
+            WorkflowConflictException exception) {
+
+        return buildErrorResponse(
+                HttpStatus.CONFLICT,
+                exception.getMessage()
+        );
+    }
+
+    @ExceptionHandler(ForbiddenOperationException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(
+            ForbiddenOperationException exception) {
+
+        return buildErrorResponse(
+                HttpStatus.FORBIDDEN,
+                exception.getMessage()
+        );
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
             IllegalArgumentException exception) {
 
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message(exception.getMessage())
-                .build();
-
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(errorResponse);
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                exception.getMessage()
+        );
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -57,9 +92,17 @@ public class GlobalExceptionHandler {
                         .fieldErrors(fieldErrors)
                         .build();
 
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(errorResponse);
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(
+            BadCredentialsException exception) {
+
+        return buildErrorResponse(
+                HttpStatus.UNAUTHORIZED,
+                "Invalid email or password"
+        );
     }
 
     @ExceptionHandler(Exception.class)
@@ -68,15 +111,23 @@ public class GlobalExceptionHandler {
 
         logger.error("Unexpected error while processing request", exception);
 
+        return buildErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "An unexpected error occurred"
+        );
+    }
+
+    private ResponseEntity<ErrorResponse> buildErrorResponse(
+            HttpStatus status,
+            String message) {
+
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
-                .message("An unexpected error occurred")
+                .status(status.value())
+                .error(status.getReasonPhrase())
+                .message(message)
                 .build();
 
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(errorResponse);
+        return ResponseEntity.status(status).body(errorResponse);
     }
 }

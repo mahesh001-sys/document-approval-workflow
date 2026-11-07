@@ -3,6 +3,7 @@ package com.mahesh.daw.service;
 import com.mahesh.daw.entity.Comment;
 import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.entity.User;
+import com.mahesh.daw.exception.ResourceNotFoundException;
 import com.mahesh.daw.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,7 +33,7 @@ public class CommentService {
 
         return commentRepository.findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new ResourceNotFoundException(
                                 "Comment not found with id: " + id
                         )
                 );

@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -139,7 +140,7 @@ class JwtAuthenticationFilterTest {
 
         when(jwtService.extractUsername(token))
                 .thenThrow(
-                        new RuntimeException("Invalid JWT")
+                        new io.jsonwebtoken.MalformedJwtException("Invalid JWT")
                 );
 
         MockHttpServletRequest request =
@@ -230,5 +231,33 @@ class JwtAuthenticationFilterTest {
                 request,
                 response
         );
+    }
+
+    @Test
+    void userNoLongerExistsShouldRemainUnauthenticated()
+            throws Exception {
+
+        String token = "valid-token-for-deleted-user";
+
+        when(jwtService.extractUsername(token))
+                .thenReturn("deleted@example.com");
+
+        when(userDetailsService.loadUserByUsername("deleted@example.com"))
+                .thenThrow(new UsernameNotFoundException("User not found"));
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer " + token);
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        FilterChain filterChain = mock(FilterChain.class);
+
+        filter.doFilter(request, response, filterChain);
+
+        assertNull(
+                SecurityContextHolder.getContext().getAuthentication()
+        );
+
+        verify(filterChain).doFilter(request, response);
     }
 }

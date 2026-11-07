@@ -1,5 +1,6 @@
 package com.mahesh.daw.security;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,6 +10,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -29,39 +31,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
-        String authHeader =
-                request.getHeader("Authorization");
+        String authHeader = request.getHeader("Authorization");
 
-        if (authHeader == null ||
-                !authHeader.startsWith("Bearer ")) {
-
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token =
-                authHeader.substring(7);
+        String token = authHeader.substring(7);
 
         try {
-
-            String username =
-                    jwtService.extractUsername(token);
+            String username = jwtService.extractUsername(token);
 
             if (username != null &&
-                    SecurityContextHolder
-                            .getContext()
-                            .getAuthentication() == null) {
+                    SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 UserDetails userDetails =
-                        userDetailsService
-                                .loadUserByUsername(username);
+                        userDetailsService.loadUserByUsername(username);
 
-                if (jwtService.isTokenValid(
-                        token,
-                        userDetails)) {
+                if (jwtService.isTokenValid(token, userDetails)) {
 
-                    UsernamePasswordAuthenticationToken
-                            authentication =
+                    UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
                                     null,
@@ -73,14 +63,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     .buildDetails(request)
                     );
 
-                    SecurityContextHolder
-                            .getContext()
+                    SecurityContextHolder.getContext()
                             .setAuthentication(authentication);
                 }
             }
 
-        } catch (Exception ignored) {
-            // Invalid token - request will remain unauthenticated
+        } catch (JwtException | IllegalArgumentException |
+                 UsernameNotFoundException exception) {
+            // Invalid token or unknown user: continue without authentication.
         }
 
         filterChain.doFilter(request, response);

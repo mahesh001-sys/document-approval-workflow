@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import requestService from "../api/requestService";
 
@@ -12,37 +12,46 @@ function RequestDetails() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  const loadRequest = async () => {
-    try {
-      setLoading(true);
-      setError("");
 
-      const data =
-        await requestService.getRequestById(id);
-
-      setRequest(data);
-    } catch (err) {
-      console.error(
-        "Failed to load request:",
-        err
-      );
-
-      if (err.response?.status === 401) {
-        navigate("/login");
-        return;
-      }
-
-      setError(
-        "Unable to load request details."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    loadRequest();
-  }, [id]);
+    let isActive = true;
+
+    requestService
+      .getRequestById(id)
+      .then((data) => {
+        if (!isActive) return;
+
+        setError("");
+        setRequest(data);
+      })
+      .catch((err) => {
+        if (!isActive) return;
+
+        console.error(
+          "Failed to load request:",
+          err
+        );
+
+        if (err.response?.status === 401) {
+          navigate("/login");
+          return;
+        }
+
+        setError(
+          "Unable to load request details."
+        );
+      })
+      .finally(() => {
+        if (isActive) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [id, navigate]);
 
   const handleSubmitRequest = async () => {
     try {

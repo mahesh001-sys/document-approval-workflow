@@ -35,6 +35,7 @@ public class RequestType {
     private String description;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean active = true;
 
     @Column(name = "created_at", nullable = false)

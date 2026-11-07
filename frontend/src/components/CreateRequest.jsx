@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import requestService from "../api/requestService";
 
@@ -8,12 +8,49 @@ function CreateRequest() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    requestType: ""
+    requestTypeId: ""
   });
 
+  const [requestTypes, setRequestTypes] = useState([]);
+  const [loadingTypes, setLoadingTypes] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRequestTypes = async () => {
+      try {
+        const types =
+          await requestService.getActiveRequestTypes();
+
+        if (isMounted) {
+          setRequestTypes(
+            Array.isArray(types) ? types : []
+          );
+        }
+      } catch (err) {
+        console.error("Failed to load request types:", err);
+
+        if (isMounted) {
+          setError(
+            "Unable to load request types. Please refresh the page."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingTypes(false);
+        }
+      }
+    };
+
+    loadRequestTypes();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -29,6 +66,11 @@ function CreateRequest() {
 
     setError("");
     setSuccess("");
+
+    if (!formData.requestTypeId) {
+      setError("Please select a request type.");
+      return;
+    }
 
     if (!formData.title.trim()) {
       setError("Request title is required.");
@@ -47,7 +89,7 @@ function CreateRequest() {
         await requestService.createRequest({
           title: formData.title.trim(),
           description: formData.description.trim(),
-          requestType: formData.requestType || null
+          requestTypeId: Number(formData.requestTypeId)
         });
 
       setSuccess(
@@ -59,17 +101,14 @@ function CreateRequest() {
       setFormData({
         title: "",
         description: "",
-        requestType: ""
+        requestTypeId: ""
       });
 
       setTimeout(() => {
         navigate("/dashboard");
       }, 1200);
     } catch (err) {
-      console.error(
-        "Failed to create request:",
-        err
-      );
+      console.error("Failed to create request:", err);
 
       if (err.response?.status === 401) {
         setError(
@@ -89,6 +128,9 @@ function CreateRequest() {
       setLoading(false);
     }
   };
+
+  const noRequestTypes =
+    !loadingTypes && requestTypes.length === 0;
 
   return (
     <div className="auth-page">
@@ -140,19 +182,46 @@ function CreateRequest() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <label htmlFor="requestType">
+          <label htmlFor="requestTypeId">
             Request Type
           </label>
 
-          <input
-            id="requestType"
-            name="requestType"
-            type="text"
-            value={formData.requestType}
+          <select
+            id="requestTypeId"
+            name="requestTypeId"
+            value={formData.requestTypeId}
             onChange={handleChange}
-            placeholder="Example: Purchase, Leave, Access"
-            disabled={loading}
-          />
+            disabled={loading || loadingTypes || noRequestTypes}
+            required
+            style={{
+              width: "100%",
+              padding: "14px",
+              marginBottom: "18px",
+              border: "1px solid #d0d5dd",
+              borderRadius: "9px"
+            }}
+          >
+            <option value="">
+              {loadingTypes
+                ? "Loading request types..."
+                : noRequestTypes
+                  ? "No active request types available"
+                  : "Select a request type"}
+            </option>
+
+            {requestTypes.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.name}
+              </option>
+            ))}
+          </select>
+
+          {noRequestTypes && (
+            <p style={{ color: "#b42318", fontSize: "14px" }}>
+              No active request types were found.
+              Please contact an administrator.
+            </p>
+          )}
 
           <label htmlFor="title">
             Request Title
@@ -205,20 +274,20 @@ function CreateRequest() {
             <button
               type="submit"
               className="button primary"
-              disabled={loading}
+              disabled={
+                loading ||
+                loadingTypes ||
+                noRequestTypes
+              }
             >
-              {loading
-                ? "Creating..."
-                : "Create Request"}
+              {loading ? "Creating..." : "Create Request"}
             </button>
 
             <button
               type="button"
               className="button secondary"
               disabled={loading}
-              onClick={() =>
-                navigate("/dashboard")
-              }
+              onClick={() => navigate("/dashboard")}
             >
               Cancel
             </button>

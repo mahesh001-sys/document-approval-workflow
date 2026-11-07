@@ -1,5 +1,7 @@
 package com.mahesh.daw.controller;
 
+import com.mahesh.daw.dto.RequestCreateRequest;
+import com.mahesh.daw.dto.RequestResponse;
 import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.entity.RequestStatus;
 import com.mahesh.daw.service.RequestService;
@@ -19,58 +21,65 @@ public class RequestController {
 
     private final RequestService requestService;
 
-    // Create a new request
     @PostMapping
-    public ResponseEntity<Request> createRequest(
-            @Valid @RequestBody Request request) {
+    public ResponseEntity<RequestResponse> createRequest(
+            @Valid @RequestBody RequestCreateRequest request,
+            Authentication authentication) {
 
-        Request createdRequest =
-                requestService.createRequest(request);
+        RequestResponse createdRequest =
+                requestService.createRequest(
+                        request,
+                        authentication.getName()
+                );
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(createdRequest);
     }
 
-    // Get request by ID - requester only
     @GetMapping("/{id}")
-    public ResponseEntity<Request> getRequestById(
+    public ResponseEntity<RequestResponse> getRequestById(
             @PathVariable Long id,
             Authentication authentication) {
 
-        Request request =
-                requestService.getRequestByIdForEmail(
+        return ResponseEntity.ok(
+                requestService.getRequestResponseByIdForEmail(
                         id,
                         authentication.getName()
-                );
-
-        return ResponseEntity.ok(request);
-    }
-
-    // Get request by request number
-    @GetMapping("/number/{requestNumber}")
-    public ResponseEntity<Request> getRequestByNumber(
-            @PathVariable String requestNumber) {
-
-        return ResponseEntity.ok(
-                requestService.getRequestByNumber(
-                        requestNumber
                 )
         );
     }
 
-    // Get all requests
+    @GetMapping("/number/{requestNumber}")
+    public ResponseEntity<RequestResponse> getRequestByNumber(
+            @PathVariable String requestNumber) {
+
+        return ResponseEntity.ok(
+                requestService.getRequestResponseByNumber(requestNumber)
+        );
+    }
+
+    // All requests - manager view
     @GetMapping
-    public ResponseEntity<List<Request>> getAllRequests() {
+    public ResponseEntity<List<RequestResponse>> getAllRequests() {
 
         return ResponseEntity.ok(
                 requestService.getAllRequests()
         );
     }
 
-    // Get requests by status
+    // Requests belonging to the authenticated employee
+    @GetMapping("/my")
+    public ResponseEntity<List<RequestResponse>> getMyRequests(
+            Authentication authentication) {
+
+        return ResponseEntity.ok(
+                requestService.getMyRequests(authentication.getName())
+        );
+    }
+
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<Request>> getRequestsByStatus(
+    public ResponseEntity<List<RequestResponse>> getRequestsByStatus(
             @PathVariable RequestStatus status) {
 
         return ResponseEntity.ok(
@@ -78,39 +87,34 @@ public class RequestController {
         );
     }
 
-    // Submit draft request - requester only
     @PostMapping("/{id}/submit")
-    public ResponseEntity<Request> submitRequest(
+    public ResponseEntity<RequestResponse> submitRequest(
             @PathVariable Long id,
             Authentication authentication) {
 
-        Request submittedRequest =
+        return ResponseEntity.ok(
                 requestService.submitRequestForUser(
                         id,
                         authentication.getName()
-                );
-
-        return ResponseEntity.ok(submittedRequest);
+                )
+        );
     }
 
-    // Update request - requester only
     @PutMapping("/{id}")
-    public ResponseEntity<Request> updateRequest(
+    public ResponseEntity<RequestResponse> updateRequest(
             @PathVariable Long id,
             @Valid @RequestBody Request request,
             Authentication authentication) {
 
-        Request updatedRequest =
+        return ResponseEntity.ok(
                 requestService.updateRequestForUser(
                         id,
                         request,
                         authentication.getName()
-                );
-
-        return ResponseEntity.ok(updatedRequest);
+                )
+        );
     }
 
-    // Delete request - requester only
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRequest(
             @PathVariable Long id,

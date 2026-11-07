@@ -1,6 +1,8 @@
 package com.mahesh.daw.service;
 
 import com.mahesh.daw.entity.RequestType;
+import com.mahesh.daw.exception.DuplicateResourceException;
+import com.mahesh.daw.exception.ResourceNotFoundException;
 import com.mahesh.daw.repository.RequestTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,7 +18,7 @@ public class RequestTypeService {
     public RequestType createRequestType(RequestType requestType) {
 
         if (requestTypeRepository.existsByName(requestType.getName())) {
-            throw new IllegalArgumentException(
+            throw new DuplicateResourceException(
                     "Request type already exists: " + requestType.getName()
             );
         }
@@ -28,7 +30,7 @@ public class RequestTypeService {
 
         return requestTypeRepository.findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new ResourceNotFoundException(
                                 "Request type not found with id: " + id
                         )
                 );
@@ -38,7 +40,7 @@ public class RequestTypeService {
 
         return requestTypeRepository.findByName(name)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new ResourceNotFoundException(
                                 "Request type not found: " + name
                         )
                 );

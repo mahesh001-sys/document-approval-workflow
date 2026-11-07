@@ -1,6 +1,11 @@
 package com.mahesh.daw.service;
 
+import com.mahesh.daw.dto.UserRegistrationRequest;
+import com.mahesh.daw.exception.DuplicateResourceException;
+import com.mahesh.daw.exception.ResourceNotFoundException;
+import com.mahesh.daw.entity.Role;
 import com.mahesh.daw.entity.User;
+import com.mahesh.daw.repository.RoleRepository;
 import com.mahesh.daw.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -13,19 +18,32 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public User createUser(User user) {
+    public User createUser(UserRegistrationRequest request) {
 
-        if (userRepository.existsByEmail(user.getEmail())) {
-            throw new IllegalArgumentException(
-                    "User already exists with email: " + user.getEmail()
+        if (userRepository.existsByEmail(request.email())) {
+            throw new DuplicateResourceException(
+                    "User already exists with email: " + request.email()
             );
         }
 
-        user.setPassword(
-                passwordEncoder.encode(user.getPassword())
-        );
+        Role defaultRole = roleRepository.findByName("USER")
+                .orElseThrow(() ->
+                        new IllegalStateException(
+                                "Default USER role was not found"
+                        )
+                );
+
+        User user = User.builder()
+                .firstName(request.firstName())
+                .lastName(request.lastName())
+                .email(request.email())
+                .password(passwordEncoder.encode(request.password()))
+                .role(defaultRole)
+                .active(true)
+                .build();
 
         return userRepository.save(user);
     }
@@ -34,7 +52,7 @@ public class UserService {
 
         return userRepository.findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new ResourceNotFoundException(
                                 "User not found with id: " + id
                         )
                 );
@@ -44,7 +62,7 @@ public class UserService {
 
         return userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new IllegalArgumentException(
+                        new ResourceNotFoundException(
                                 "User not found with email: " + email
                         )
                 );

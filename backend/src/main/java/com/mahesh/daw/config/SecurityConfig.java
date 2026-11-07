@@ -6,6 +6,8 @@ import com.mahesh.daw.security.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -45,12 +47,18 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${app.cors.allowed-origins:http://localhost:5173}")
+            String allowedOrigins) {
+
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of(
-                "https://ubiquitous-yodel-v64rxqqq4xq2wxx6-5173.app.github.dev"
-        ));
+        configuration.setAllowedOrigins(
+                java.util.Arrays.stream(allowedOrigins.split(","))
+                        .map(String::trim)
+                        .filter(origin -> !origin.isEmpty())
+                        .toList()
+        );
 
         configuration.setAllowedMethods(List.of(
                 "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
@@ -72,11 +80,13 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-            HttpSecurity http) throws Exception {
+            HttpSecurity http,
+            CorsConfigurationSource corsConfigurationSource)
+            throws Exception {
 
         http
                 .cors(cors -> cors.configurationSource(
-                        corsConfigurationSource()
+                        corsConfigurationSource
                 ))
 
                 .csrf(csrf -> csrf.disable())
@@ -101,11 +111,23 @@ public class SecurityConfig {
                                 "/api/auth/login"
                         ).permitAll()
 
-                        // User and role creation
+                        // Public user registration only
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/users"
+                        ).permitAll()
+
+                        // User management is restricted to administrators
                         .requestMatchers(
                                 "/api/users",
-                                "/api/roles"
-                        ).permitAll()
+                                "/api/users/**"
+                        ).hasRole("ADMIN")
+
+                        // Role management is restricted to administrators
+                        .requestMatchers(
+                                "/api/roles",
+                                "/api/roles/**"
+                        ).hasRole("ADMIN")
 
                         // Manager workflow operations
                         .requestMatchers(

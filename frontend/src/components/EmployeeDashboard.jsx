@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import authService from "../api/authService";
 import requestService from "../api/requestService";
@@ -8,44 +8,54 @@ function EmployeeDashboard() {
 
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState("");
 
   const user = authService.getUser();
 
-  const loadRequests = async () => {
-    try {
-      setLoading(true);
-      setError("");
 
-      const data =
-        await requestService.getAllRequests();
-
-      setRequests(
-        Array.isArray(data) ? data : []
-      );
-    } catch (err) {
-      console.error(
-        "Failed to load requests:",
-        err
-      );
-
-      if (err.response?.status === 401) {
-        authService.logout();
-        navigate("/login");
-        return;
-      }
-
-      setError(
-        "Unable to load requests. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    loadRequests();
-  }, []);
+    let isActive = true;
+
+    requestService
+      .getMyRequests()
+      .then((data) => {
+        if (!isActive) return;
+
+        setError("");
+        setRequests(
+          Array.isArray(data) ? data : []
+        );
+      })
+      .catch((err) => {
+        if (!isActive) return;
+
+        console.error(
+          "Failed to load requests:",
+          err
+        );
+
+        if (err.response?.status === 401) {
+          authService.logout();
+          navigate("/login");
+          return;
+        }
+
+        setError(
+          "Unable to load requests. Please try again."
+        );
+      })
+      .finally(() => {
+        if (isActive) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [navigate, reloadKey]);
 
   const handleLogout = () => {
     authService.logout();
@@ -203,7 +213,7 @@ function EmployeeDashboard() {
               <button
                 type="button"
                 className="button secondary"
-                onClick={loadRequests}
+                onClick={() => setReloadKey((current) => current + 1)}
               >
                 Try Again
               </button>

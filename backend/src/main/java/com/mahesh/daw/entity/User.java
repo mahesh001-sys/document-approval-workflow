@@ -1,5 +1,6 @@
 package com.mahesh.daw.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -43,6 +44,7 @@ public class User {
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
+    @JsonIgnore
     @NotBlank(message = "Password cannot be blank")
     @Size(min = 8, max = 255, message = "Password must be between 8 and 255 characters")
     @Column(nullable = false, length = 255)
@@ -54,6 +56,7 @@ public class User {
     private Role role;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean active = true;
 
     @Column(name = "created_at", nullable = false)

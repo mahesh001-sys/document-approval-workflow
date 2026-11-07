@@ -66,6 +66,8 @@ class AuthControllerTest {
                                 """)
         )
         .andExpect(status().isOk())
-        .andExpect(content().string("test-jwt-token"));
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+        .andExpect(jsonPath("$.accessToken").value("test-jwt-token"))
+        .andExpect(jsonPath("$.role").value("USER"));
     }
 }

@@ -1,3 +1,4 @@
+
 package com.mahesh.daw.security;
 
 import com.mahesh.daw.entity.User;
@@ -21,7 +22,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String email)
             throws UsernameNotFoundException {
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailWithRole(email)
                 .orElseThrow(() ->
                         new UsernameNotFoundException(
                                 "User not found with email: " + email

@@ -7,6 +7,7 @@ import com.mahesh.daw.entity.Notification;
 import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.entity.RequestStatus;
 import com.mahesh.daw.entity.User;
+import com.mahesh.daw.exception.WorkflowConflictException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -194,7 +195,7 @@ public class ApprovalWorkflowService {
         if (request.getStatus() != RequestStatus.MANAGER_REVIEW
                 && request.getStatus() != RequestStatus.ADMIN_REVIEW) {
 
-            throw new IllegalStateException(
+            throw new WorkflowConflictException(
                     "Request cannot be rejected from status: "
                             + request.getStatus()
             );
@@ -245,7 +246,7 @@ public class ApprovalWorkflowService {
         if (request.getStatus() != RequestStatus.MANAGER_REVIEW
                 && request.getStatus() != RequestStatus.ADMIN_REVIEW) {
 
-            throw new IllegalStateException(
+            throw new WorkflowConflictException(
                     "Request cannot be returned from status: "
                             + request.getStatus()
             );
@@ -291,7 +292,7 @@ public class ApprovalWorkflowService {
 
         if (request.getStatus() != expectedStatus) {
 
-            throw new IllegalStateException(
+            throw new WorkflowConflictException(
                     "Request must be in "
                             + expectedStatus
                             + " status. Current status: "
