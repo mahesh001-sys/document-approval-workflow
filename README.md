@@ -384,7 +384,7 @@ The following checks were previously verified during project development:
 
 ### Backend
 
-- 67 backend tests passed.
+- 70 backend tests passed.
 - Authentication and authorization tests.
 - Request service tests.
 - Approval workflow tests.
