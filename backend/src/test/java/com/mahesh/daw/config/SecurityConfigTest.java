@@ -46,7 +46,6 @@ class SecurityConfigTest {
     @Autowired
     private MockMvc mockMvc;
 
-    // Keep the real JWT filter; mock only its dependencies.
     @MockitoBean
     private JwtService jwtService;
 
@@ -59,28 +58,46 @@ class SecurityConfigTest {
     @MockitoBean
     private RoleService roleService;
 
-    // Anonymous users must not access protected endpoints.
-    @Test
-    void anonymousUserCannotAccessUserManagement()
-            throws Exception {
+    // ---------------------------------------------------------
+    // Anonymous access
+    // ---------------------------------------------------------
 
+    @Test
+    void anonymousUserCannotAccessUserManagement() throws Exception {
         mockMvc.perform(get("/api/users"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void anonymousUserCannotAccessRoleManagement()
-            throws Exception {
-
+    void anonymousUserCannotAccessRoleManagement() throws Exception {
         mockMvc.perform(get("/api/roles"))
                 .andExpect(status().isUnauthorized());
     }
 
-    // Public registration must remain available.
     @Test
-    void anonymousUserCanRegister()
-            throws Exception {
+    void anonymousUserCannotAccessRequestQueue() throws Exception {
+        mockMvc.perform(get("/api/requests"))
+                .andExpect(status().isUnauthorized());
+    }
 
+    @Test
+    void anonymousUserCannotAccessManagerWorkflow() throws Exception {
+        mockMvc.perform(post("/api/workflow/1/manager/review"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void anonymousUserCannotAccessAdminWorkflow() throws Exception {
+        mockMvc.perform(post("/api/workflow/1/admin/review"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ---------------------------------------------------------
+    // Public registration
+    // ---------------------------------------------------------
+
+    @Test
+    void anonymousUserCanRegister() throws Exception {
         Role userRole = Role.builder()
                 .id(1L)
                 .name("USER")
@@ -114,31 +131,34 @@ class SecurityConfigTest {
                 .andExpect(jsonPath("$.password").doesNotExist());
     }
 
-    // Normal USER role must not access administrator endpoints.
+    // ---------------------------------------------------------
+    // User and role administration
+    // ---------------------------------------------------------
+
     @Test
     @WithMockUser(roles = "USER")
-    void normalUserCannotAccessUserManagement()
-            throws Exception {
-
+    void normalUserCannotAccessUserManagement() throws Exception {
         mockMvc.perform(get("/api/users"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser(roles = "USER")
-    void normalUserCannotAccessRoleManagement()
-            throws Exception {
-
+    void normalUserCannotAccessRoleManagement() throws Exception {
         mockMvc.perform(get("/api/roles"))
                 .andExpect(status().isForbidden());
     }
 
-    // ADMIN role must be allowed to access administrator endpoints.
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void managerCannotAccessUserManagement() throws Exception {
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isForbidden());
+    }
+
     @Test
     @WithMockUser(roles = "ADMIN")
-    void adminCanAccessUserManagement()
-            throws Exception {
-
+    void adminCanAccessUserManagement() throws Exception {
         when(userService.getAllUsers()).thenReturn(List.of());
 
         mockMvc.perform(get("/api/users"))
@@ -147,12 +167,167 @@ class SecurityConfigTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    void adminCanAccessRoleManagement()
-            throws Exception {
-
+    void adminCanAccessRoleManagement() throws Exception {
         when(roleService.getAllRoles()).thenReturn(List.of());
 
         mockMvc.perform(get("/api/roles"))
                 .andExpect(status().isOk());
+    }
+
+    // ---------------------------------------------------------
+    // Request queue permissions
+    // ---------------------------------------------------------
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void employeeCannotAccessAllRequestsQueue() throws Exception {
+        mockMvc.perform(get("/api/requests"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void managerCanPassRequestQueueAuthorization() throws Exception {
+        mockMvc.perform(get("/api/requests"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminCanPassRequestQueueAuthorization() throws Exception {
+        mockMvc.perform(get("/api/requests"))
+                .andExpect(status().isNotFound());
+    }
+
+    // ---------------------------------------------------------
+    // Employee request creation permissions
+    // ---------------------------------------------------------
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void employeeCanPassRequestCreationAuthorization() throws Exception {
+        mockMvc.perform(post("/api/requests"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void managerCannotCreateEmployeeRequest() throws Exception {
+        mockMvc.perform(post("/api/requests"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminCannotCreateEmployeeRequest() throws Exception {
+        mockMvc.perform(post("/api/requests"))
+                .andExpect(status().isForbidden());
+    }
+
+    // ---------------------------------------------------------
+    // Manager workflow permissions
+    // ---------------------------------------------------------
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void employeeCannotStartManagerReview() throws Exception {
+        mockMvc.perform(post("/api/workflow/1/manager/review"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminCannotPerformManagerWorkflowAction() throws Exception {
+        mockMvc.perform(post("/api/workflow/1/manager/review"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void managerCanPassManagerWorkflowAuthorization() throws Exception {
+        mockMvc.perform(post("/api/workflow/1/manager/review"))
+                .andExpect(status().isNotFound());
+    }
+
+    // ---------------------------------------------------------
+    // Admin workflow permissions
+    // ---------------------------------------------------------
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void employeeCannotStartAdminReview() throws Exception {
+        mockMvc.perform(post("/api/workflow/1/admin/review"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void managerCannotPerformAdminWorkflowAction() throws Exception {
+        mockMvc.perform(post("/api/workflow/1/admin/review"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminCanPassAdminWorkflowAuthorization() throws Exception {
+        mockMvc.perform(post("/api/workflow/1/admin/review"))
+                .andExpect(status().isNotFound());
+    }
+
+    // ---------------------------------------------------------
+    // Disabled APIs
+    // ---------------------------------------------------------
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void documentsApiRemainsDisabled() throws Exception {
+        mockMvc.perform(get("/api/documents/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void commentsApiRemainsDisabled() throws Exception {
+        mockMvc.perform(post("/api/comments"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void notificationsApiRemainsDisabled() throws Exception {
+        mockMvc.perform(get("/api/notifications/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    // ---------------------------------------------------------
+    // Approval history and audit log permissions
+    // ---------------------------------------------------------
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void employeeCannotReadApprovalHistory() throws Exception {
+        mockMvc.perform(get("/api/approval-history/request/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void managerCanPassApprovalHistoryAuthorization() throws Exception {
+        mockMvc.perform(get("/api/approval-history/request/1"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void managerCannotReadAuditLogs() throws Exception {
+        mockMvc.perform(get("/api/audit-logs"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminCanPassAuditLogAuthorization() throws Exception {
+        mockMvc.perform(get("/api/audit-logs"))
+                .andExpect(status().isNotFound());
     }
 }

@@ -1,15 +1,15 @@
 package com.mahesh.daw.service;
 
+import com.mahesh.daw.dto.RequestResponse;
 import com.mahesh.daw.entity.*;
+import com.mahesh.daw.exception.ForbiddenOperationException;
 import com.mahesh.daw.exception.WorkflowConflictException;
-import com.mahesh.daw.repository.RequestRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,273 +36,260 @@ class ApprovalWorkflowServiceTest {
     @InjectMocks
     private ApprovalWorkflowService approvalWorkflowService;
 
-    @Test
-    void submitRequestShouldChangeStatusToSubmitted() {
+    private Request request;
+    private User employee;
 
-        Request request = Request.builder()
+    @BeforeEach
+    void setUp() {
+        employee = User.builder()
                 .id(1L)
-                .requestNumber("REQ-001")
-                .status(RequestStatus.DRAFT)
+                .firstName("Employee")
+                .lastName("Test")
+                .email("employee@example.com")
+                .active(true)
                 .build();
 
-        when(requestService.getRequestById(1L))
-                .thenReturn(request);
+        RequestType requestType = RequestType.builder()
+                .id(1L)
+                .name("Leave")
+                .build();
 
-        when(requestService.updateRequest(any(Request.class)))
+        request = Request.builder()
+                .id(100L)
+                .requestNumber("REQ-001")
+                .title("Leave Request")
+                .description("Personal leave")
+                .status(RequestStatus.SUBMITTED)
+                .priority(RequestPriority.MEDIUM)
+                .requester(employee)
+                .requestType(requestType)
+                .build();
+
+        lenient().when(requestService.getRequestById(100L)).thenReturn(request);
+
+        lenient().when(requestService.updateRequest(any(Request.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+    }
 
-        Request result =
-                approvalWorkflowService.submitRequest(1L);
+    private User actor(String email, String roleName, boolean active) {
+        return User.builder()
+                .id(10L)
+                .firstName("Test")
+                .lastName(roleName)
+                .email(email)
+                .active(active)
+                .role(Role.builder().id(2L).name(roleName).build())
+                .build();
+    }
 
-        assertEquals(
-                RequestStatus.SUBMITTED,
-                result.getStatus()
-        );
-
-        verify(requestService)
-                .updateRequest(request);
-
-        verify(auditLogService)
-                .createAuditLog(any(AuditLog.class));
+    private void authenticate(String email, String role, boolean active) {
+        when(userService.getUserByEmail(email))
+                .thenReturn(actor(email, role, active));
     }
 
     @Test
     void managerReviewShouldChangeStatusToManagerReview() {
+        authenticate("manager@example.com", "MANAGER", true);
 
-        Request request = Request.builder()
-                .id(1L)
-                .requestNumber("REQ-001")
-                .status(RequestStatus.SUBMITTED)
-                .build();
+        RequestResponse result =
+                approvalWorkflowService.startManagerReview(
+                        100L, "manager@example.com");
 
-        when(requestService.getRequestById(1L))
-                .thenReturn(request);
-
-        when(requestService.updateRequest(any(Request.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        Request result =
-                approvalWorkflowService.startManagerReview(1L);
-
-        assertEquals(
-                RequestStatus.MANAGER_REVIEW,
-                result.getStatus()
-        );
-
-        verify(requestService)
-                .updateRequest(request);
-
-        verify(auditLogService)
-                .createAuditLog(any(AuditLog.class));
+        assertEquals("MANAGER_REVIEW", result.status());
+        verify(auditLogService).createAuditLog(any(AuditLog.class));
+        verify(requestService).updateRequest(request);
     }
 
     @Test
     void managerReviewShouldRejectInvalidStatus() {
-
-        Request request = Request.builder()
-                .id(1L)
-                .requestNumber("REQ-001")
-                .status(RequestStatus.DRAFT)
-                .build();
-
-        when(requestService.getRequestById(1L))
-                .thenReturn(request);
+        authenticate("manager@example.com", "MANAGER", true);
+        request.setStatus(RequestStatus.DRAFT);
 
         assertThrows(
                 WorkflowConflictException.class,
-                () -> approvalWorkflowService.startManagerReview(1L)
+                () -> approvalWorkflowService.startManagerReview(
+                        100L, "manager@example.com")
         );
 
-        verify(requestService, never())
-                .updateRequest(any(Request.class));
+        verify(requestService, never()).updateRequest(any());
     }
 
     @Test
-    void managerApprovalShouldChangeStatusToManagerApproved() {
+    void managerApprovalShouldChangeStatusAndCreateRecords() {
+        authenticate("manager@example.com", "MANAGER", true);
+        request.setStatus(RequestStatus.MANAGER_REVIEW);
 
-        Request request = Request.builder()
-                .id(1L)
-                .requestNumber("REQ-001")
-                .status(RequestStatus.MANAGER_REVIEW)
-                .build();
-
-        User approver = User.builder()
-                .id(10L)
-                .email("manager@example.com")
-                .build();
-
-        when(requestService.getRequestById(1L))
-                .thenReturn(request);
-
-        when(userService.getUserById(10L))
-                .thenReturn(approver);
-
-        when(requestService.updateRequest(any(Request.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        Request result =
+        RequestResponse result =
                 approvalWorkflowService.approveManagerRequest(
-                        1L,
-                        10L,
-                        "Approved"
-                );
+                        100L, "manager@example.com", "Looks good");
 
-        assertEquals(
-                RequestStatus.MANAGER_APPROVED,
-                result.getStatus()
-        );
+        assertEquals("MANAGER_APPROVED", result.status());
 
         verify(approvalHistoryService)
                 .createHistory(any(ApprovalHistory.class));
-
         verify(auditLogService)
                 .createAuditLog(any(AuditLog.class));
+        verify(notificationService)
+                .createNotification(any(Notification.class));
+    }
+
+    @Test
+    void managerApprovalShouldRejectWrongRole() {
+        authenticate("employee@example.com", "USER", true);
+        request.setStatus(RequestStatus.MANAGER_REVIEW);
+
+        assertThrows(
+                ForbiddenOperationException.class,
+                () -> approvalWorkflowService.approveManagerRequest(
+                        100L, "employee@example.com", "Approved")
+        );
+
+        verify(requestService, never()).updateRequest(any());
+    }
+
+    @Test
+    void inactiveManagerShouldNotPerformWorkflowAction() {
+        authenticate("manager@example.com", "MANAGER", false);
+
+        assertThrows(
+                ForbiddenOperationException.class,
+                () -> approvalWorkflowService.startManagerReview(
+                        100L, "manager@example.com")
+        );
+
+        verify(requestService, never()).updateRequest(any());
+    }
+
+    @Test
+    void managerRejectShouldChangeStatusToRejected() {
+        authenticate("manager@example.com", "MANAGER", true);
+        request.setStatus(RequestStatus.MANAGER_REVIEW);
+
+        RequestResponse result =
+                approvalWorkflowService.rejectManagerRequest(
+                        100L, "manager@example.com", "Insufficient details");
+
+        assertEquals("REJECTED", result.status());
+        verify(approvalHistoryService)
+                .createHistory(any(ApprovalHistory.class));
+        verify(notificationService)
+                .createNotification(any(Notification.class));
+    }
+
+    @Test
+    void managerReturnShouldChangeStatusToReturned() {
+        authenticate("manager@example.com", "MANAGER", true);
+        request.setStatus(RequestStatus.MANAGER_REVIEW);
+
+        RequestResponse result =
+                approvalWorkflowService.returnManagerRequest(
+                        100L, "manager@example.com", "Please correct the dates");
+
+        assertEquals("RETURNED", result.status());
+        verify(approvalHistoryService)
+                .createHistory(any(ApprovalHistory.class));
+    }
+
+    @Test
+    void managerCannotRejectDuringAdminReview() {
+        authenticate("manager@example.com", "MANAGER", true);
+        request.setStatus(RequestStatus.ADMIN_REVIEW);
+
+        assertThrows(
+                WorkflowConflictException.class,
+                () -> approvalWorkflowService.rejectManagerRequest(
+                        100L, "manager@example.com", "Reject")
+        );
     }
 
     @Test
     void adminReviewShouldChangeStatusToAdminReview() {
+        authenticate("admin@example.com", "ADMIN", true);
+        request.setStatus(RequestStatus.MANAGER_APPROVED);
 
-        Request request = Request.builder()
-                .id(1L)
-                .requestNumber("REQ-001")
-                .status(RequestStatus.MANAGER_APPROVED)
-                .build();
+        RequestResponse result =
+                approvalWorkflowService.startAdminReview(
+                        100L, "admin@example.com");
 
-        when(requestService.getRequestById(1L))
-                .thenReturn(request);
-
-        when(requestService.updateRequest(any(Request.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        Request result =
-                approvalWorkflowService.startAdminReview(1L);
-
-        assertEquals(
-                RequestStatus.ADMIN_REVIEW,
-                result.getStatus()
-        );
-
-        verify(auditLogService)
-                .createAuditLog(any(AuditLog.class));
+        assertEquals("ADMIN_REVIEW", result.status());
+        verify(auditLogService).createAuditLog(any(AuditLog.class));
     }
 
     @Test
-    void adminApprovalShouldCompleteRequest() {
+    void adminApprovalShouldCompleteRequestAndSetCompletedAt() {
+        authenticate("admin@example.com", "ADMIN", true);
+        request.setStatus(RequestStatus.ADMIN_REVIEW);
 
-        Request request = Request.builder()
-                .id(1L)
-                .requestNumber("REQ-001")
-                .status(RequestStatus.ADMIN_REVIEW)
-                .build();
-
-        User approver = User.builder()
-                .id(20L)
-                .email("admin@example.com")
-                .build();
-
-        when(requestService.getRequestById(1L))
-                .thenReturn(request);
-
-        when(userService.getUserById(20L))
-                .thenReturn(approver);
-
-        when(requestService.updateRequest(any(Request.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        Request result =
+        RequestResponse result =
                 approvalWorkflowService.approveAdminRequest(
-                        1L,
-                        20L,
-                        "Final approval"
-                );
+                        100L, "admin@example.com", "Final approval");
 
-        assertEquals(
-                RequestStatus.COMPLETED,
-                result.getStatus()
-        );
+        assertEquals("COMPLETED", result.status());
+        assertNotNull(result.completedAt());
 
         verify(approvalHistoryService)
                 .createHistory(any(ApprovalHistory.class));
-
-        verify(auditLogService, atLeastOnce())
+        verify(auditLogService, times(2))
                 .createAuditLog(any(AuditLog.class));
+        verify(notificationService)
+                .createNotification(any(Notification.class));
     }
 
     @Test
-    void rejectRequestShouldChangeStatusToRejected() {
+    void adminApprovalShouldRejectWrongRole() {
+        authenticate("manager@example.com", "MANAGER", true);
+        request.setStatus(RequestStatus.ADMIN_REVIEW);
 
-        Request request = Request.builder()
-                .id(1L)
-                .requestNumber("REQ-001")
-                .status(RequestStatus.MANAGER_REVIEW)
-                .build();
-
-        User approver = User.builder()
-                .id(10L)
-                .email("manager@example.com")
-                .build();
-
-        when(requestService.getRequestById(1L))
-                .thenReturn(request);
-
-        when(userService.getUserById(10L))
-                .thenReturn(approver);
-
-        when(requestService.updateRequest(any(Request.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        Request result =
-                approvalWorkflowService.rejectRequest(
-                        1L,
-                        10L,
-                        "Rejected"
-                );
-
-        assertEquals(
-                RequestStatus.REJECTED,
-                result.getStatus()
+        assertThrows(
+                ForbiddenOperationException.class,
+                () -> approvalWorkflowService.approveAdminRequest(
+                        100L, "manager@example.com", "Approved")
         );
 
+        verify(requestService, never()).updateRequest(any());
+    }
+
+    @Test
+    void adminRejectShouldChangeStatusToRejected() {
+        authenticate("admin@example.com", "ADMIN", true);
+        request.setStatus(RequestStatus.ADMIN_REVIEW);
+
+        RequestResponse result =
+                approvalWorkflowService.rejectAdminRequest(
+                        100L, "admin@example.com", "Policy violation");
+
+        assertEquals("REJECTED", result.status());
+        verify(approvalHistoryService)
+                .createHistory(any(ApprovalHistory.class));
+        verify(notificationService)
+                .createNotification(any(Notification.class));
+    }
+
+    @Test
+    void adminReturnShouldChangeStatusToReturned() {
+        authenticate("admin@example.com", "ADMIN", true);
+        request.setStatus(RequestStatus.ADMIN_REVIEW);
+
+        RequestResponse result =
+                approvalWorkflowService.returnAdminRequest(
+                        100L, "admin@example.com", "Additional documents required");
+
+        assertEquals("RETURNED", result.status());
         verify(approvalHistoryService)
                 .createHistory(any(ApprovalHistory.class));
     }
 
     @Test
-    void returnRequestShouldChangeStatusToReturned() {
+    void adminCannotApproveBeforeManagerApproval() {
+        authenticate("admin@example.com", "ADMIN", true);
+        request.setStatus(RequestStatus.SUBMITTED);
 
-        Request request = Request.builder()
-                .id(1L)
-                .requestNumber("REQ-001")
-                .status(RequestStatus.MANAGER_REVIEW)
-                .build();
-
-        User approver = User.builder()
-                .id(10L)
-                .email("manager@example.com")
-                .build();
-
-        when(requestService.getRequestById(1L))
-                .thenReturn(request);
-
-        when(userService.getUserById(10L))
-                .thenReturn(approver);
-
-        when(requestService.updateRequest(any(Request.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        Request result =
-                approvalWorkflowService.returnRequest(
-                        1L,
-                        10L,
-                        "Please correct the request"
-                );
-
-        assertEquals(
-                RequestStatus.RETURNED,
-                result.getStatus()
+        assertThrows(
+                WorkflowConflictException.class,
+                () -> approvalWorkflowService.approveAdminRequest(
+                        100L, "admin@example.com", "Approved")
         );
 
-        verify(approvalHistoryService)
-                .createHistory(any(ApprovalHistory.class));
+        verify(requestService, never()).updateRequest(any());
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 
 import java.lang.reflect.Method;
 
@@ -141,6 +142,22 @@ class GlobalExceptionHandlerTest {
         assertEquals(401, response.getBody().getStatus());
         assertEquals(
                 "Invalid email or password",
+                response.getBody().getMessage()
+        );
+    }
+
+    @Test
+    void unsupportedHttpMethodShouldReturn405() {
+
+        ResponseEntity<ErrorResponse> response =
+                handler.handleMethodNotSupported(
+                        new HttpRequestMethodNotSupportedException("GET")
+                );
+
+        assertEquals(HttpStatus.METHOD_NOT_ALLOWED, response.getStatusCode());
+        assertEquals(405, response.getBody().getStatus());
+        assertEquals(
+                "HTTP method not supported for this endpoint",
                 response.getBody().getMessage()
         );
     }

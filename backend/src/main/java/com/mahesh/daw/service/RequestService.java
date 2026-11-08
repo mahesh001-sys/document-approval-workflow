@@ -2,6 +2,7 @@ package com.mahesh.daw.service;
 
 import com.mahesh.daw.dto.RequestCreateRequest;
 import com.mahesh.daw.dto.RequestResponse;
+import com.mahesh.daw.dto.RequestUpdateRequest;
 import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.entity.RequestPriority;
 import com.mahesh.daw.entity.RequestType;
@@ -87,15 +88,6 @@ public class RequestService {
                 );
     }
 
-    public Request getRequestByIdForUser(Long id, User user) {
-
-        Request request = getRequestById(id);
-
-        validateOwnership(request, user);
-
-        return request;
-    }
-
     @Transactional(readOnly = true)
     public Request getRequestByIdForEmail(Long id, String email) {
 
@@ -136,11 +128,21 @@ public class RequestService {
     }
 
     @Transactional(readOnly = true)
-    public RequestResponse getRequestResponseByNumber(String requestNumber) {
+    public RequestResponse getRequestResponseByNumberForEmail(
+            String requestNumber,
+            String email) {
 
-        return RequestResponse.from(
-                getRequestByNumber(requestNumber)
-        );
+        Request request = getRequestByNumber(requestNumber);
+
+        if (request.getRequester() == null
+                || request.getRequester().getEmail() == null
+                || !request.getRequester().getEmail().equalsIgnoreCase(email)) {
+            throw new ForbiddenOperationException(
+                    "You are not authorized to access this request"
+            );
+        }
+
+        return RequestResponse.from(request);
     }
 
     @Transactional(readOnly = true)
@@ -161,10 +163,6 @@ public class RequestService {
                 .toList();
     }
 
-    public List<Request> getRequestsByRequester(User requester) {
-        return requestRepository.findByRequester(requester);
-    }
-
     @Transactional(readOnly = true)
     public List<RequestResponse> getRequestsByStatus(
             RequestStatus status) {
@@ -175,40 +173,15 @@ public class RequestService {
                 .toList();
     }
 
-    public List<Request> getRequestsByRequesterAndStatus(
-            User requester,
-            RequestStatus status) {
-
-        return requestRepository.findByRequesterAndStatus(
-                requester,
-                status
-        );
-    }
-
-    public Request submitRequest(Long id) {
-
-        Request request = getRequestById(id);
-
-        if (request.getStatus() != RequestStatus.DRAFT) {
-            throw new WorkflowConflictException(
-                    "Only DRAFT requests can be submitted"
-            );
-        }
-
-        request.setStatus(RequestStatus.SUBMITTED);
-        request.setSubmittedAt(LocalDateTime.now());
-
-        return requestRepository.save(request);
-    }
-
     @Transactional
     public RequestResponse submitRequestForUser(Long id, String email) {
 
         Request request = getRequestByIdForEmail(id, email);
 
-        if (request.getStatus() != RequestStatus.DRAFT) {
+        if (request.getStatus() != RequestStatus.DRAFT
+                && request.getStatus() != RequestStatus.RETURNED) {
             throw new WorkflowConflictException(
-                    "Only DRAFT requests can be submitted"
+                    "Only DRAFT or RETURNED requests can be submitted"
             );
         }
 
@@ -227,26 +200,39 @@ public class RequestService {
     @Transactional
     public RequestResponse updateRequestForUser(
             Long id,
-            Request updatedRequest,
+            RequestUpdateRequest updatedRequest,
             String email) {
 
         Request existingRequest = getRequestByIdForEmail(id, email);
 
-        existingRequest.setTitle(updatedRequest.getTitle());
-        existingRequest.setDescription(updatedRequest.getDescription());
-        existingRequest.setPriority(updatedRequest.getPriority());
-        existingRequest.setRequestType(updatedRequest.getRequestType());
+        validateEditableStatus(existingRequest);
+
+        existingRequest.setTitle(updatedRequest.title().trim());
+        existingRequest.setDescription(updatedRequest.description());
+
+        if (updatedRequest.priority() != null) {
+            existingRequest.setPriority(updatedRequest.priority());
+        }
+
+        RequestType requestType = requestTypeRepository
+                .findById(updatedRequest.requestTypeId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Request type not found"
+                        )
+                );
+
+        if (!Boolean.TRUE.equals(requestType.getActive())) {
+            throw new ForbiddenOperationException(
+                    "This request type is inactive"
+            );
+        }
+
+        existingRequest.setRequestType(requestType);
 
         return RequestResponse.from(
                 requestRepository.save(existingRequest)
         );
-    }
-
-    public void deleteRequest(Long id) {
-
-        Request request = getRequestById(id);
-
-        requestRepository.delete(request);
     }
 
     @Transactional
@@ -254,22 +240,18 @@ public class RequestService {
 
         Request request = getRequestByIdForEmail(id, email);
 
+        validateEditableStatus(request);
+
         requestRepository.delete(request);
     }
 
-    private void validateOwnership(Request request, User user) {
-
-        if (request.getRequester() == null
-                || user == null
-                || request.getRequester().getId() == null
-                || user.getId() == null
-                || !request.getRequester()
-                        .getId()
-                        .equals(user.getId())) {
-
-            throw new ForbiddenOperationException(
-                    "You are not authorized to access this request"
+    private void validateEditableStatus(Request request) {
+        if (request.getStatus() != RequestStatus.DRAFT
+                && request.getStatus() != RequestStatus.RETURNED) {
+            throw new WorkflowConflictException(
+                    "Only DRAFT or RETURNED requests can be edited or deleted"
             );
         }
     }
+
 }

@@ -1,0 +1,128 @@
+/* EMPLOYEE — Professional Teal */
+.dashboard-page.employee-dashboard {
+  --role-primary: #0F766E;
+  --role-hover: #115E59;
+  --role-accent: #14B8A6;
+  --role-soft: #F0FDFA;
+  --role-border: #CCFBF1;
+  background: #F5F7FA;
+  color: #172B4D;
+}
+
+.employee-dashboard .dashboard-header {
+  background: linear-gradient(110deg, #FFFFFF, #F0FDFA);
+  border: 1px solid #CCFBF1;
+  border-left: 4px solid #0F766E;
+}
+
+.employee-dashboard .section-label {
+  color: #0F766E;
+  letter-spacing: .11em;
+}
+
+.employee-dashboard .dashboard-header h1,
+.employee-dashboard .section-heading h2 {
+  color: #123B3A;
+}
+
+.employee-dashboard .dashboard-header p {
+  color: #526B70;
+}
+
+.employee-dashboard .stat-card {
+  background: #FFFFFF;
+  border: 1px solid #DCE3EC;
+  border-top: 3px solid #14B8A6;
+  box-shadow: 0 3px 12px rgba(15, 118, 110, .045);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.employee-dashboard .stat-card:hover {
+  border-color: #99F6E4;
+  box-shadow: 0 8px 22px rgba(15, 118, 110, .09);
+  transform: translateY(-2px);
+}
+
+.employee-dashboard .stat-card h3,
+.employee-dashboard .stat-card .stat-value {
+  color: #123B3A;
+}
+
+.employee-dashboard .requests-section,
+.employee-dashboard .dashboard-panel,
+.employee-dashboard .workflow-step {
+  background: #FFFFFF;
+  border-color: #DCE8E7;
+  box-shadow: 0 4px 16px rgba(23, 43, 77, .045);
+}
+
+.employee-dashboard .request-table thead,
+.employee-dashboard .dashboard-table thead {
+  background: #F0FDFA;
+}
+
+.employee-dashboard .request-table th,
+.employee-dashboard .dashboard-table th {
+  color: #285B59;
+}
+
+.employee-dashboard .button.primary,
+.employee-dashboard button.primary,
+.employee-dashboard .table-button.primary {
+  background: #0F766E;
+  border-color: #0F766E;
+  color: #FFFFFF;
+}
+
+.employee-dashboard .button.primary:hover,
+.employee-dashboard button.primary:hover,
+.employee-dashboard .table-button.primary:hover {
+  background: #115E59;
+  border-color: #115E59;
+}
+
+.employee-dashboard .button.secondary,
+.employee-dashboard button.secondary {
+  background: #FFFFFF;
+  border-color: #B8D8D4;
+  color: #0F766E;
+}
+
+.employee-dashboard .workflow-steps {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.employee-dashboard .workflow-step {
+  border-top: 3px solid #14B8A6;
+}
+
+.employee-dashboard .workflow-step > span {
+  background: #CCFBF1;
+  color: #0F766E;
+}
+
+.employee-dashboard .workflow-step h3 {
+  color: #123B3A;
+}
+
+.employee-dashboard .workflow-step p {
+  color: #667085;
+}
+
+@media (max-width: 1100px) {
+  .employee-dashboard .workflow-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .employee-dashboard .workflow-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 460px) {
+  .employee-dashboard .workflow-steps {
+    grid-template-columns: 1fr;
+  }
+}

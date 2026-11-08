@@ -19,21 +19,20 @@ const authService = {
     });
 
     const data = response.data;
+    const token = data.accessToken || data.token;
 
-    if (data.token) {
-      localStorage.setItem("accessToken", data.token);
+    if (token) {
+      localStorage.setItem("accessToken", token);
     }
 
-    if (data.accessToken) {
-      localStorage.setItem("accessToken", data.accessToken);
-    }
+    // The backend AuthResponse returns { accessToken, role }.
+    // Never trust a role supplied by the registration form.
+    const user = {
+      ...(data.user || {}),
+      role: data.user?.role || data.role || null
+    };
 
-    if (data.user) {
-      localStorage.setItem(
-        "user",
-        JSON.stringify(data.user)
-      );
-    }
+    localStorage.setItem("user", JSON.stringify(user));
 
     return data;
   },
@@ -50,9 +49,7 @@ const authService = {
   getUser() {
     const user = localStorage.getItem("user");
 
-    if (!user) {
-      return null;
-    }
+    if (!user) return null;
 
     try {
       return JSON.parse(user);
@@ -62,9 +59,7 @@ const authService = {
   },
 
   isAuthenticated() {
-    return Boolean(
-      localStorage.getItem("accessToken")
-    );
+    return Boolean(localStorage.getItem("accessToken"));
   }
 };
 

@@ -1,16 +1,14 @@
 package com.mahesh.daw.service;
 
-import com.mahesh.daw.entity.ApprovalAction;
-import com.mahesh.daw.entity.ApprovalHistory;
-import com.mahesh.daw.entity.AuditLog;
-import com.mahesh.daw.entity.Notification;
-import com.mahesh.daw.entity.Request;
-import com.mahesh.daw.entity.RequestStatus;
-import com.mahesh.daw.entity.User;
+import com.mahesh.daw.dto.RequestResponse;
+import com.mahesh.daw.entity.*;
+import com.mahesh.daw.exception.ForbiddenOperationException;
 import com.mahesh.daw.exception.WorkflowConflictException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -23,281 +21,208 @@ public class ApprovalWorkflowService {
     private final NotificationService notificationService;
 
     @Transactional
-    public Request submitRequest(Long requestId) {
-
-        Request request = requestService.getRequestById(requestId);
-
-        validateStatus(request, RequestStatus.DRAFT);
-
-        request.setStatus(RequestStatus.SUBMITTED);
-
-        Request savedRequest = requestService.updateRequest(request);
-
-        createAuditLog(
-                savedRequest,
-                null,
-                "REQUEST_SUBMITTED",
-                "Request submitted for approval"
-        );
-
-        return savedRequest;
-    }
-
-    @Transactional
-    public Request startManagerReview(Long requestId) {
-
+    public RequestResponse startManagerReview(Long requestId, String actorEmail) {
+        User manager = getActiveActor(actorEmail, "MANAGER");
         Request request = requestService.getRequestById(requestId);
 
         validateStatus(request, RequestStatus.SUBMITTED);
-
         request.setStatus(RequestStatus.MANAGER_REVIEW);
 
-        Request savedRequest = requestService.updateRequest(request);
+        Request saved = requestService.updateRequest(request);
+        createAuditLog(saved, manager, "MANAGER_REVIEW_STARTED",
+                "Manager review started");
 
-        createAuditLog(
-                savedRequest,
-                null,
-                "MANAGER_REVIEW_STARTED",
-                "Manager review started"
-        );
-
-        return savedRequest;
+        return RequestResponse.from(saved);
     }
 
     @Transactional
-    public Request approveManagerRequest(
-            Long requestId,
-            Long approverId,
-            String comments) {
+    public RequestResponse approveManagerRequest(
+            Long requestId, String actorEmail, String comments) {
 
+        User manager = getActiveActor(actorEmail, "MANAGER");
         Request request = requestService.getRequestById(requestId);
 
         validateStatus(request, RequestStatus.MANAGER_REVIEW);
 
-        User approver = userService.getUserById(approverId);
-
-        RequestStatus previousStatus = request.getStatus();
-
+        RequestStatus previous = request.getStatus();
         request.setStatus(RequestStatus.MANAGER_APPROVED);
 
-        Request savedRequest = requestService.updateRequest(request);
+        Request saved = requestService.updateRequest(request);
 
-        createApprovalHistory(
-                savedRequest,
-                approver,
-                ApprovalAction.APPROVED,
-                comments,
-                previousStatus,
-                RequestStatus.MANAGER_APPROVED
-        );
+        createApprovalHistory(saved, manager, ApprovalAction.APPROVED,
+                comments, previous, RequestStatus.MANAGER_APPROVED);
 
-        createAuditLog(
-                savedRequest,
-                approver,
-                "MANAGER_APPROVED",
-                "Request approved by manager"
-        );
+        createAuditLog(saved, manager, "MANAGER_APPROVED",
+                "Request approved by manager");
 
-        createNotification(
-                savedRequest.getRequester(),
-                savedRequest,
+        createNotification(saved.getRequester(), saved,
                 "Request Manager Approved",
-                "Your request has been approved by the manager."
-        );
+                "Your request has been approved by the manager.");
 
-        return savedRequest;
+        return RequestResponse.from(saved);
     }
 
     @Transactional
-    public Request startAdminReview(Long requestId) {
+    public RequestResponse rejectManagerRequest(
+            Long requestId, String actorEmail, String comments) {
 
+        return rejectAtStage(requestId, actorEmail, comments,
+                "MANAGER", RequestStatus.MANAGER_REVIEW);
+    }
+
+    @Transactional
+    public RequestResponse returnManagerRequest(
+            Long requestId, String actorEmail, String comments) {
+
+        return returnAtStage(requestId, actorEmail, comments,
+                "MANAGER", RequestStatus.MANAGER_REVIEW);
+    }
+
+    @Transactional
+    public RequestResponse startAdminReview(Long requestId, String actorEmail) {
+        User admin = getActiveActor(actorEmail, "ADMIN");
         Request request = requestService.getRequestById(requestId);
 
         validateStatus(request, RequestStatus.MANAGER_APPROVED);
-
         request.setStatus(RequestStatus.ADMIN_REVIEW);
 
-        Request savedRequest = requestService.updateRequest(request);
+        Request saved = requestService.updateRequest(request);
+        createAuditLog(saved, admin, "ADMIN_REVIEW_STARTED",
+                "Admin review started");
 
-        createAuditLog(
-                savedRequest,
-                null,
-                "ADMIN_REVIEW_STARTED",
-                "Admin review started"
-        );
-
-        return savedRequest;
+        return RequestResponse.from(saved);
     }
 
     @Transactional
-    public Request approveAdminRequest(
-            Long requestId,
-            Long approverId,
-            String comments) {
+    public RequestResponse approveAdminRequest(
+            Long requestId, String actorEmail, String comments) {
 
+        User admin = getActiveActor(actorEmail, "ADMIN");
         Request request = requestService.getRequestById(requestId);
 
         validateStatus(request, RequestStatus.ADMIN_REVIEW);
 
-        User approver = userService.getUserById(approverId);
+        RequestStatus previous = request.getStatus();
+        request.setStatus(RequestStatus.COMPLETED);
+        request.setCompletedAt(LocalDateTime.now());
 
-        RequestStatus previousStatus = request.getStatus();
+        Request saved = requestService.updateRequest(request);
 
-        request.setStatus(RequestStatus.APPROVED);
+        createApprovalHistory(saved, admin, ApprovalAction.APPROVED,
+                comments, previous, RequestStatus.COMPLETED);
 
-        Request savedRequest = requestService.updateRequest(request);
+        createAuditLog(saved, admin, "ADMIN_APPROVED",
+                "Request approved by admin");
 
-        createApprovalHistory(
-                savedRequest,
-                approver,
-                ApprovalAction.APPROVED,
-                comments,
-                previousStatus,
-                RequestStatus.APPROVED
-        );
+        createAuditLog(saved, admin, "REQUEST_COMPLETED",
+                "Request workflow completed");
 
-        createAuditLog(
-                savedRequest,
-                approver,
-                "ADMIN_APPROVED",
-                "Request approved by admin"
-        );
-
-        savedRequest.setStatus(RequestStatus.COMPLETED);
-
-        savedRequest = requestService.updateRequest(savedRequest);
-
-        createAuditLog(
-                savedRequest,
-                approver,
-                "REQUEST_COMPLETED",
-                "Request workflow completed"
-        );
-
-        createNotification(
-                savedRequest.getRequester(),
-                savedRequest,
+        createNotification(saved.getRequester(), saved,
                 "Request Approved",
-                "Your request has been fully approved."
-        );
+                "Your request has been fully approved.");
 
-        return savedRequest;
+        return RequestResponse.from(saved);
     }
 
     @Transactional
-    public Request rejectRequest(
-            Long requestId,
-            Long approverId,
-            String comments) {
+    public RequestResponse rejectAdminRequest(
+            Long requestId, String actorEmail, String comments) {
 
-        Request request = requestService.getRequestById(requestId);
-
-        if (request.getStatus() != RequestStatus.MANAGER_REVIEW
-                && request.getStatus() != RequestStatus.ADMIN_REVIEW) {
-
-            throw new WorkflowConflictException(
-                    "Request cannot be rejected from status: "
-                            + request.getStatus()
-            );
-        }
-
-        User approver = userService.getUserById(approverId);
-
-        RequestStatus previousStatus = request.getStatus();
-
-        request.setStatus(RequestStatus.REJECTED);
-
-        Request savedRequest = requestService.updateRequest(request);
-
-        createApprovalHistory(
-                savedRequest,
-                approver,
-                ApprovalAction.REJECTED,
-                comments,
-                previousStatus,
-                RequestStatus.REJECTED
-        );
-
-        createAuditLog(
-                savedRequest,
-                approver,
-                "REQUEST_REJECTED",
-                "Request rejected during approval"
-        );
-
-        createNotification(
-                savedRequest.getRequester(),
-                savedRequest,
-                "Request Rejected",
-                "Your request has been rejected."
-        );
-
-        return savedRequest;
+        return rejectAtStage(requestId, actorEmail, comments,
+                "ADMIN", RequestStatus.ADMIN_REVIEW);
     }
 
     @Transactional
-    public Request returnRequest(
-            Long requestId,
-            Long approverId,
-            String comments) {
+    public RequestResponse returnAdminRequest(
+            Long requestId, String actorEmail, String comments) {
 
-        Request request = requestService.getRequestById(requestId);
-
-        if (request.getStatus() != RequestStatus.MANAGER_REVIEW
-                && request.getStatus() != RequestStatus.ADMIN_REVIEW) {
-
-            throw new WorkflowConflictException(
-                    "Request cannot be returned from status: "
-                            + request.getStatus()
-            );
-        }
-
-        User approver = userService.getUserById(approverId);
-
-        RequestStatus previousStatus = request.getStatus();
-
-        request.setStatus(RequestStatus.RETURNED);
-
-        Request savedRequest = requestService.updateRequest(request);
-
-        createApprovalHistory(
-                savedRequest,
-                approver,
-                ApprovalAction.RETURNED,
-                comments,
-                previousStatus,
-                RequestStatus.RETURNED
-        );
-
-        createAuditLog(
-                savedRequest,
-                approver,
-                "REQUEST_RETURNED",
-                "Request returned for correction"
-        );
-
-        createNotification(
-                savedRequest.getRequester(),
-                savedRequest,
-                "Request Returned",
-                "Your request has been returned for correction."
-        );
-
-        return savedRequest;
+        return returnAtStage(requestId, actorEmail, comments,
+                "ADMIN", RequestStatus.ADMIN_REVIEW);
     }
 
-    private void validateStatus(
-            Request request,
+    private RequestResponse rejectAtStage(
+            Long requestId,
+            String actorEmail,
+            String comments,
+            String expectedRole,
             RequestStatus expectedStatus) {
 
-        if (request.getStatus() != expectedStatus) {
+        User approver = getActiveActor(actorEmail, expectedRole);
+        Request request = requestService.getRequestById(requestId);
 
+        validateStatus(request, expectedStatus);
+
+        RequestStatus previous = request.getStatus();
+        request.setStatus(RequestStatus.REJECTED);
+
+        Request saved = requestService.updateRequest(request);
+
+        createApprovalHistory(saved, approver, ApprovalAction.REJECTED,
+                comments, previous, RequestStatus.REJECTED);
+
+        createAuditLog(saved, approver, "REQUEST_REJECTED",
+                "Request rejected during " + expectedRole.toLowerCase() + " review");
+
+        createNotification(saved.getRequester(), saved,
+                "Request Rejected",
+                "Your request has been rejected.");
+
+        return RequestResponse.from(saved);
+    }
+
+    private RequestResponse returnAtStage(
+            Long requestId,
+            String actorEmail,
+            String comments,
+            String expectedRole,
+            RequestStatus expectedStatus) {
+
+        User approver = getActiveActor(actorEmail, expectedRole);
+        Request request = requestService.getRequestById(requestId);
+
+        validateStatus(request, expectedStatus);
+
+        RequestStatus previous = request.getStatus();
+        request.setStatus(RequestStatus.RETURNED);
+
+        Request saved = requestService.updateRequest(request);
+
+        createApprovalHistory(saved, approver, ApprovalAction.RETURNED,
+                comments, previous, RequestStatus.RETURNED);
+
+        createAuditLog(saved, approver, "REQUEST_RETURNED",
+                "Request returned for correction");
+
+        createNotification(saved.getRequester(), saved,
+                "Request Returned",
+                "Your request has been returned for correction.");
+
+        return RequestResponse.from(saved);
+    }
+
+    private User getActiveActor(String email, String expectedRole) {
+        User actor = userService.getUserByEmail(email);
+
+        if (!Boolean.TRUE.equals(actor.getActive())) {
+            throw new ForbiddenOperationException(
+                    "Inactive users cannot perform workflow actions");
+        }
+
+        if (actor.getRole() == null
+                || !expectedRole.equalsIgnoreCase(actor.getRole().getName())) {
+            throw new ForbiddenOperationException(
+                    "Only an active " + expectedRole.toLowerCase()
+                            + " can perform this action");
+        }
+
+        return actor;
+    }
+
+    private void validateStatus(Request request, RequestStatus expectedStatus) {
+        if (request.getStatus() != expectedStatus) {
             throw new WorkflowConflictException(
-                    "Request must be in "
-                            + expectedStatus
-                            + " status. Current status: "
-                            + request.getStatus()
-            );
+                    "Request must be in " + expectedStatus
+                            + " status. Current status: " + request.getStatus());
         }
     }
 

@@ -1,0 +1,112 @@
+/* ADMIN — Executive Navy and Blue */
+.dashboard-page.admin-dashboard {
+  --role-primary: #142D4E;
+  --role-hover: #0F2340;
+  --role-accent: #1D4ED8;
+  --role-soft: #EFF6FF;
+  --role-border: #DBEAFE;
+  background: #F5F7FA;
+  color: #172B4D;
+}
+
+.admin-dashboard .dashboard-header {
+  background: #142D4E;
+  border: 1px solid #142D4E;
+  box-shadow: 0 8px 24px rgba(20, 45, 78, .14);
+}
+
+.admin-dashboard .dashboard-header h1 {
+  color: #FFFFFF;
+}
+
+.admin-dashboard .dashboard-header p {
+  color: #D5E1F0;
+}
+
+.admin-dashboard .dashboard-header .section-label {
+  color: #93C5FD;
+  letter-spacing: .12em;
+}
+
+.admin-dashboard .dashboard-header .button.secondary,
+.admin-dashboard .dashboard-header button.secondary {
+  background: rgba(255, 255, 255, .08);
+  border-color: rgba(255, 255, 255, .35);
+  color: #FFFFFF;
+}
+
+.admin-dashboard .dashboard-header .button.secondary:hover,
+.admin-dashboard .dashboard-header button.secondary:hover {
+  background: rgba(255, 255, 255, .16);
+}
+
+.admin-dashboard .section-label {
+  color: #1D4ED8;
+  letter-spacing: .11em;
+}
+
+.admin-dashboard .section-heading h2,
+.admin-dashboard .dashboard-panel h2,
+.admin-dashboard .dashboard-panel h3 {
+  color: #142D4E;
+}
+
+.admin-dashboard .stat-card {
+  background: #FFFFFF;
+  border: 1px solid #DCE3EC;
+  border-top: 3px solid #1D4ED8;
+  box-shadow: 0 3px 12px rgba(20, 45, 78, .05);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.admin-dashboard .stat-card:hover {
+  border-color: #BFDBFE;
+  box-shadow: 0 8px 22px rgba(20, 45, 78, .1);
+  transform: translateY(-2px);
+}
+
+.admin-dashboard .stat-card h3,
+.admin-dashboard .stat-card .stat-value {
+  color: #142D4E;
+}
+
+.admin-dashboard .requests-section,
+.admin-dashboard .dashboard-panel {
+  background: #FFFFFF;
+  border-color: #DCE3EC;
+  box-shadow: 0 4px 16px rgba(20, 45, 78, .055);
+}
+
+.admin-dashboard .request-table thead,
+.admin-dashboard .dashboard-table thead {
+  background: #EFF6FF;
+}
+
+.admin-dashboard .request-table th,
+.admin-dashboard .dashboard-table th {
+  color: #1E40AF;
+}
+
+.admin-dashboard .button.primary,
+.admin-dashboard button.primary,
+.admin-dashboard .table-button.primary,
+.admin-dashboard .table-button {
+  background: #1D4ED8;
+  border-color: #1D4ED8;
+  color: #FFFFFF;
+}
+
+.admin-dashboard .button.primary:hover,
+.admin-dashboard button.primary:hover,
+.admin-dashboard .table-button.primary:hover,
+.admin-dashboard .table-button:hover {
+  background: #1E40AF;
+  border-color: #1E40AF;
+}
+
+.admin-dashboard .button.secondary,
+.admin-dashboard button.secondary {
+  background: #FFFFFF;
+  border-color: #BFDBFE;
+  color: #1D4ED8;
+}

@@ -9,49 +9,66 @@ function EditRequest() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    requestType: ""
+    requestTypeId: ""
   });
 
+  const [requestTypes, setRequestTypes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTypes, setLoadingTypes] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const loadRequest = async () => {
+    let isMounted = true;
+
+    const loadData = async () => {
       try {
         setLoading(true);
+        setLoadingTypes(true);
         setError("");
 
-        const request =
-          await requestService.getRequestById(id);
+        const [request, types] = await Promise.all([
+          requestService.getRequestById(id),
+          requestService.getActiveRequestTypes()
+        ]);
 
-        if (request.status !== "DRAFT") {
+        if (!isMounted) return;
+
+        if (!["DRAFT", "RETURNED"].includes(request.status)) {
           setError(
-            "Only draft requests can be edited."
+            "Only draft or returned requests can be edited."
           );
           return;
         }
 
+        setRequestTypes(Array.isArray(types) ? types : []);
+
         setFormData({
           title: request.title || "",
           description: request.description || "",
-          requestType: request.requestType || ""
+          requestTypeId: String(request.requestTypeId || "")
         });
       } catch (err) {
-        console.error(
-          "Failed to load request:",
-          err
-        );
+        console.error("Failed to load request:", err);
 
-        setError(
-          "Unable to load the request."
-        );
+        if (isMounted) {
+          setError(
+            "Unable to load the request or request types."
+          );
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+          setLoadingTypes(false);
+        }
       }
     };
 
-    loadRequest();
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   const handleChange = (event) => {
@@ -65,8 +82,12 @@ function EditRequest() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
     setError("");
+
+    if (!formData.requestTypeId) {
+      setError("Please select a request type.");
+      return;
+    }
 
     if (!formData.title.trim()) {
       setError("Request title is required.");
@@ -81,29 +102,20 @@ function EditRequest() {
     try {
       setSaving(true);
 
-      await requestService.updateRequest(
-        id,
-        {
-          title: formData.title.trim(),
-          description: formData.description.trim(),
-          requestType:
-            formData.requestType.trim() || null
-        }
-      );
+      await requestService.updateRequest(id, {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        requestTypeId: Number(formData.requestTypeId)
+      });
 
       navigate(`/requests/${id}`);
     } catch (err) {
-      console.error(
-        "Failed to update request:",
-        err
-      );
+      console.error("Failed to update request:", err);
 
       if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else {
-        setError(
-          "Unable to update the request."
-        );
+        setError("Unable to update the request.");
       }
     } finally {
       setSaving(false);
@@ -125,15 +137,12 @@ function EditRequest() {
       <div className="auth-page">
         <div className="auth-card">
           <h1>Unable to Edit</h1>
-
           <p>{error}</p>
 
           <button
             type="button"
             className="button secondary"
-            onClick={() =>
-              navigate(`/requests/${id}`)
-            }
+            onClick={() => navigate(`/requests/${id}`)}
           >
             Back to Request
           </button>
@@ -141,6 +150,8 @@ function EditRequest() {
       </div>
     );
   }
+
+  const noRequestTypes = requestTypes.length === 0;
 
   return (
     <div className="auth-page">
@@ -155,7 +166,7 @@ function EditRequest() {
         <h1>Update Request</h1>
 
         <p>
-          Update your draft before submitting it
+          Update your request before submitting it
           for approval.
         </p>
 
@@ -175,19 +186,39 @@ function EditRequest() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <label htmlFor="requestType">
+          <label htmlFor="requestTypeId">
             Request Type
           </label>
 
-          <input
-            id="requestType"
-            name="requestType"
-            type="text"
-            value={formData.requestType}
+          <select
+            id="requestTypeId"
+            name="requestTypeId"
+            value={formData.requestTypeId}
             onChange={handleChange}
-            placeholder="Example: Purchase, Leave, Access"
-            disabled={saving}
-          />
+            disabled={saving || loadingTypes || noRequestTypes}
+            required
+            style={{
+              width: "100%",
+              padding: "14px",
+              marginBottom: "18px",
+              border: "1px solid #d0d5dd",
+              borderRadius: "9px"
+            }}
+          >
+            <option value="">
+              {loadingTypes
+                ? "Loading request types..."
+                : noRequestTypes
+                  ? "No active request types available"
+                  : "Select a request type"}
+            </option>
+
+            {requestTypes.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.name}
+              </option>
+            ))}
+          </select>
 
           <label htmlFor="title">
             Request Title
@@ -216,7 +247,7 @@ function EditRequest() {
             onChange={handleChange}
             placeholder="Describe your request..."
             rows={7}
-            maxLength={2000}
+            maxLength={5000}
             disabled={saving}
             required
             style={{
@@ -240,20 +271,16 @@ function EditRequest() {
             <button
               type="submit"
               className="button primary"
-              disabled={saving}
+              disabled={saving || loadingTypes || noRequestTypes}
             >
-              {saving
-                ? "Saving..."
-                : "Save Changes"}
+              {saving ? "Saving..." : "Save Changes"}
             </button>
 
             <button
               type="button"
               className="button secondary"
               disabled={saving}
-              onClick={() =>
-                navigate(`/requests/${id}`)
-              }
+              onClick={() => navigate(`/requests/${id}`)}
             >
               Cancel
             </button>

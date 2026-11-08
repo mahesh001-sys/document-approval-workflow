@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import authService from "../api/authService";
 import requestService from "../api/requestService";
+import "../styles/employee-dashboard.css";
 
 function EmployeeDashboard() {
   const navigate = useNavigate();
@@ -104,7 +105,7 @@ function EmployeeDashboard() {
   ).length;
 
   return (
-    <div className="dashboard-page">
+    <div className="dashboard-page employee-dashboard">
       <header className="dashboard-header">
         <div>
           <span className="section-label">
@@ -317,8 +318,8 @@ function EmployeeDashboard() {
                               View
                             </button>
 
-                            {request.status ===
-                              "DRAFT" && (
+                            {(request.status === "DRAFT" ||
+                              request.status === "RETURNED") && (
                               <button
                                 type="button"
                                 className="table-button"

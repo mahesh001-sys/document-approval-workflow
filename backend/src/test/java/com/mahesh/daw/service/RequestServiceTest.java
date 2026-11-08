@@ -2,6 +2,7 @@ package com.mahesh.daw.service;
 
 import com.mahesh.daw.dto.RequestCreateRequest;
 import com.mahesh.daw.dto.RequestResponse;
+import com.mahesh.daw.dto.RequestUpdateRequest;
 import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.entity.RequestPriority;
 import com.mahesh.daw.entity.RequestStatus;
@@ -131,52 +132,186 @@ class RequestServiceTest {
     }
 
     @Test
-    void submitDraftRequestShouldChangeStatusToSubmitted() {
+    void getRequestByIdForEmailShouldRejectAnotherEmployee() {
+
+        User owner = User.builder()
+                .id(10L)
+                .email("owner@example.com")
+                .build();
 
         Request request = Request.builder()
                 .id(1L)
-                .requestNumber("REQ-001")
+                .requester(owner)
                 .status(RequestStatus.DRAFT)
                 .build();
 
         when(requestRepository.findById(1L))
                 .thenReturn(Optional.of(request));
 
-        when(requestRepository.save(any(Request.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
-        Request result = requestService.submitRequest(1L);
-
-        assertEquals(RequestStatus.SUBMITTED, result.getStatus());
-        assertNotNull(result.getSubmittedAt());
-
-        verify(requestRepository).findById(1L);
-        verify(requestRepository).save(request);
+        assertThrows(
+                ForbiddenOperationException.class,
+                () -> requestService.getRequestResponseByIdForEmail(
+                        1L,
+                        "other@example.com"
+                )
+        );
     }
 
     @Test
-    void submitNonDraftRequestShouldThrowException() {
+    void submitRequestForUserShouldRejectAnotherEmployee() {
+
+        User owner = User.builder()
+                .id(10L)
+                .email("owner@example.com")
+                .build();
 
         Request request = Request.builder()
                 .id(1L)
-                .requestNumber("REQ-001")
-                .status(RequestStatus.SUBMITTED)
+                .requester(owner)
+                .status(RequestStatus.DRAFT)
                 .build();
 
         when(requestRepository.findById(1L))
                 .thenReturn(Optional.of(request));
 
-        WorkflowConflictException exception = assertThrows(
-                WorkflowConflictException.class,
-                () -> requestService.submitRequest(1L)
+        assertThrows(
+                ForbiddenOperationException.class,
+                () -> requestService.submitRequestForUser(
+                        1L,
+                        "other@example.com"
+                )
         );
 
-        assertEquals(
-                "Only DRAFT requests can be submitted",
-                exception.getMessage()
-        );
-
-        verify(requestRepository).findById(1L);
         verify(requestRepository, never()).save(any(Request.class));
     }
+
+    @Test
+    void updateRequestForUserShouldRejectAnotherEmployee() {
+
+        User owner = User.builder()
+                .id(10L)
+                .email("owner@example.com")
+                .build();
+
+        Request existingRequest = Request.builder()
+                .id(1L)
+                .requester(owner)
+                .status(RequestStatus.DRAFT)
+                .title("Original title")
+                .build();
+
+        RequestUpdateRequest updatedRequest = new RequestUpdateRequest(
+                "Changed title",
+                "Updated description",
+                null,
+                5L
+        );
+
+        when(requestRepository.findById(1L))
+                .thenReturn(Optional.of(existingRequest));
+
+        assertThrows(
+                ForbiddenOperationException.class,
+                () -> requestService.updateRequestForUser(
+                        1L,
+                        updatedRequest,
+                        "other@example.com"
+                )
+        );
+
+        verify(requestRepository, never()).save(any(Request.class));
+    }
+
+    @Test
+    void deleteRequestForUserShouldRejectAnotherEmployee() {
+
+        User owner = User.builder()
+                .id(10L)
+                .email("owner@example.com")
+                .build();
+
+        Request request = Request.builder()
+                .id(1L)
+                .requester(owner)
+                .status(RequestStatus.DRAFT)
+                .build();
+
+        when(requestRepository.findById(1L))
+                .thenReturn(Optional.of(request));
+
+        assertThrows(
+                ForbiddenOperationException.class,
+                () -> requestService.deleteRequestForUser(
+                        1L,
+                        "other@example.com"
+                )
+        );
+
+        verify(requestRepository, never()).delete(any(Request.class));
+    }
+
+
+    @Test
+    void getMyRequestsShouldReturnOnlyAuthenticatedEmployeesRequests() {
+
+        User owner = User.builder()
+                .id(10L)
+                .email("owner@example.com")
+                .build();
+
+        Request ownedRequest = Request.builder()
+                .id(1L)
+                .requestNumber("REQ-OWNER-001")
+                .title("Owner request")
+                .status(RequestStatus.DRAFT)
+                .priority(RequestPriority.MEDIUM)
+                .requestType(RequestType.builder()
+                        .id(5L)
+                        .name("Leave Request")
+                        .active(true)
+                        .build())
+                .requester(owner)
+                .build();
+
+        when(requestRepository.findByRequester_Email("owner@example.com"))
+                .thenReturn(java.util.List.of(ownedRequest));
+
+        java.util.List<RequestResponse> results =
+                requestService.getMyRequests("owner@example.com");
+
+        assertEquals(1, results.size());
+        assertEquals("REQ-OWNER-001", results.get(0).requestNumber());
+        verify(requestRepository)
+                .findByRequester_Email("owner@example.com");
+        verify(requestRepository, never()).findAll();
+    }
+
+    @Test
+    void getRequestResponseByNumberForEmailShouldRejectAnotherEmployee() {
+
+        User owner = User.builder()
+                .id(10L)
+                .email("owner@example.com")
+                .build();
+
+        Request request = Request.builder()
+                .id(1L)
+                .requestNumber("REQ-OWNER-001")
+                .title("Owner request")
+                .status(RequestStatus.DRAFT)
+                .requester(owner)
+                .build();
+
+        when(requestRepository.findByRequestNumber("REQ-OWNER-001"))
+                .thenReturn(Optional.of(request));
+
+        assertThrows(
+                ForbiddenOperationException.class,
+                () -> requestService.getRequestResponseByNumberForEmail(
+                        "REQ-OWNER-001",
+                        "other@example.com"
+                )
+        );
+    }
+
 }

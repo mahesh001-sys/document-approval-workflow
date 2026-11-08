@@ -1,0 +1,99 @@
+/* MANAGER — Professional Indigo */
+.dashboard-page.manager-dashboard {
+  --role-primary: #3730A3;
+  --role-hover: #312E81;
+  --role-accent: #4F46E5;
+  --role-soft: #EEF2FF;
+  --role-border: #E0E7FF;
+  background: #F5F7FA;
+  color: #172B4D;
+}
+
+.manager-dashboard .dashboard-header {
+  background: linear-gradient(110deg, #FFFFFF, #EEF2FF);
+  border: 1px solid #E0E7FF;
+  border-left: 4px solid #3730A3;
+}
+
+.manager-dashboard .section-label {
+  color: #4338CA;
+  letter-spacing: .11em;
+}
+
+.manager-dashboard .dashboard-header h1,
+.manager-dashboard .section-heading h2 {
+  color: #25245C;
+}
+
+.manager-dashboard .dashboard-header p {
+  color: #5F6684;
+}
+
+.manager-dashboard .stat-card {
+  background: #FFFFFF;
+  border: 1px solid #DCE3EC;
+  border-top: 3px solid #4F46E5;
+  box-shadow: 0 3px 12px rgba(55, 48, 163, .045);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.manager-dashboard .stat-card:hover {
+  border-color: #C7D2FE;
+  box-shadow: 0 8px 22px rgba(55, 48, 163, .09);
+  transform: translateY(-2px);
+}
+
+.manager-dashboard .stat-card h3,
+.manager-dashboard .stat-card .stat-value {
+  color: #25245C;
+}
+
+.manager-dashboard .requests-section,
+.manager-dashboard .dashboard-panel {
+  background: #FFFFFF;
+  border-color: #E0E4F2;
+  box-shadow: 0 4px 16px rgba(23, 43, 77, .05);
+}
+
+.manager-dashboard .request-table thead,
+.manager-dashboard .dashboard-table thead {
+  background: #EEF2FF;
+}
+
+.manager-dashboard .request-table th,
+.manager-dashboard .dashboard-table th {
+  color: #3730A3;
+}
+
+.manager-dashboard .button.primary,
+.manager-dashboard button.primary,
+.manager-dashboard .table-button.primary,
+.manager-dashboard .table-button {
+  background: #4F46E5;
+  border-color: #4F46E5;
+  color: #FFFFFF;
+}
+
+.manager-dashboard .button.primary:hover,
+.manager-dashboard button.primary:hover,
+.manager-dashboard .table-button.primary:hover,
+.manager-dashboard .table-button:hover {
+  background: #3730A3;
+  border-color: #3730A3;
+}
+
+.manager-dashboard .button.secondary,
+.manager-dashboard button.secondary {
+  background: #FFFFFF;
+  border-color: #C7D2FE;
+  color: #3730A3;
+}
+
+.manager-dashboard .dashboard-panel h2,
+.manager-dashboard .dashboard-panel h3 {
+  color: #25245C;
+}
+
+.manager-dashboard .dashboard-panel .section-label {
+  color: #4F46E5;
+}

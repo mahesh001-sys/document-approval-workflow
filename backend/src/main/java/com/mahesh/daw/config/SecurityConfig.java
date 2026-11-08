@@ -4,10 +4,10 @@ import com.mahesh.daw.security.JwtAuthenticationFilter;
 import com.mahesh.daw.security.RestAccessDeniedHandler;
 import com.mahesh.daw.security.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -22,6 +22,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -41,8 +42,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration configuration)
-            throws Exception {
+            AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }
 
@@ -54,7 +54,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(
-                java.util.Arrays.stream(allowedOrigins.split(","))
+                Arrays.stream(allowedOrigins.split(","))
                         .map(String::trim)
                         .filter(origin -> !origin.isEmpty())
                         .toList()
@@ -81,22 +81,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            CorsConfigurationSource corsConfigurationSource)
-            throws Exception {
+            CorsConfigurationSource corsConfigurationSource) throws Exception {
 
         http
-                .cors(cors -> cors.configurationSource(
-                        corsConfigurationSource
-                ))
-
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
-
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-
                 .authorizeHttpRequests(auth -> auth
 
                         // Swagger / OpenAPI
@@ -107,51 +99,103 @@ public class SecurityConfig {
                         ).permitAll()
 
                         // Login
-                        .requestMatchers(
-                                "/api/auth/login"
-                        ).permitAll()
+                        .requestMatchers("/api/auth/login").permitAll()
 
-                        // Public user registration only
+                        // Public registration only
+                        .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
+
+                        // User and role administration
+                        .requestMatchers("/api/users", "/api/users/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers("/api/roles", "/api/roles/**")
+                        .hasRole("ADMIN")
+
+                        // Request queues
+                        .requestMatchers(HttpMethod.GET, "/api/requests")
+                        .hasAnyRole("MANAGER", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/requests/status/**")
+                        .hasAnyRole("MANAGER", "ADMIN")
+
+                        // Employee's own requests
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/requests/my",
+                                "/api/requests/number/**"
+                        ).authenticated()
+
+                        .requestMatchers(HttpMethod.GET, "/api/requests/*")
+                        .authenticated()
+
+                        .requestMatchers(HttpMethod.POST, "/api/requests")
+                        .hasRole("USER")
+
                         .requestMatchers(
                                 HttpMethod.POST,
-                                "/api/users"
-                        ).permitAll()
+                                "/api/requests/*/submit"
+                        ).hasRole("USER")
 
-                        // User management is restricted to administrators
+                        .requestMatchers(HttpMethod.PUT, "/api/requests/*")
+                        .hasRole("USER")
+
+                        .requestMatchers(HttpMethod.DELETE, "/api/requests/*")
+                        .hasRole("USER")
+
+                        // Request types: everyone authenticated can read;
+                        // only administrators can create.
+                        .requestMatchers(HttpMethod.GET, "/api/request-types/**")
+                        .authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/request-types/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers("/api/request-types/**")
+                        .denyAll()
+
+                        // Approval steps: managers/admins can read;
+                        // only admins can configure them.
+                        .requestMatchers(HttpMethod.GET, "/api/approval-steps/**")
+                        .hasAnyRole("MANAGER", "ADMIN")
                         .requestMatchers(
-                                "/api/users",
-                                "/api/users/**"
+                                HttpMethod.POST, "/api/approval-steps/**"
                         ).hasRole("ADMIN")
-
-                        // Role management is restricted to administrators
                         .requestMatchers(
-                                "/api/roles",
-                                "/api/roles/**"
+                                HttpMethod.PUT, "/api/approval-steps/**"
                         ).hasRole("ADMIN")
+                        .requestMatchers("/api/approval-steps/**")
+                        .denyAll()
 
-                        // Manager workflow operations
-                        .requestMatchers(
-                                "/api/workflow/*/manager/**"
-                        ).hasRole("MANAGER")
+                        // Approval history is read-only through the API.
+                        // Workflow services create trusted history records.
+                        .requestMatchers(HttpMethod.GET, "/api/approval-history/**")
+                        .hasAnyRole("MANAGER", "ADMIN")
+                        .requestMatchers("/api/approval-history/**")
+                        .denyAll()
 
-                        // Admin workflow operations
-                        .requestMatchers(
-                                "/api/workflow/*/admin/**"
-                        ).hasRole("ADMIN")
+                        // Audit logs are admin-readable and never directly writable.
+                        .requestMatchers(HttpMethod.GET, "/api/audit-logs/**")
+                        .hasRole("ADMIN")
+                        .requestMatchers("/api/audit-logs/**")
+                        .denyAll()
+
+                        // These APIs remain disabled until resource ownership
+                        // is enforced in their service methods.
+                        .requestMatchers("/api/documents/**").denyAll()
+                        .requestMatchers("/api/comments/**").denyAll()
+                        .requestMatchers("/api/notifications/**").denyAll()
+
+                        // Manager workflow
+                        .requestMatchers("/api/workflow/*/manager/**")
+                        .hasRole("MANAGER")
+
+                        // Admin workflow
+                        .requestMatchers("/api/workflow/*/admin/**")
+                        .hasRole("ADMIN")
 
                         // Everything else requires authentication
                         .anyRequest().authenticated()
                 )
-
                 .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(
-                                restAuthenticationEntryPoint
-                        )
-                        .accessDeniedHandler(
-                                restAccessDeniedHandler
-                        )
+                        .authenticationEntryPoint(restAuthenticationEntryPoint)
+                        .accessDeniedHandler(restAccessDeniedHandler)
                 )
-
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class

@@ -2,7 +2,7 @@ package com.mahesh.daw.controller;
 
 import com.mahesh.daw.dto.RequestCreateRequest;
 import com.mahesh.daw.dto.RequestResponse;
-import com.mahesh.daw.entity.Request;
+import com.mahesh.daw.dto.RequestUpdateRequest;
 import com.mahesh.daw.entity.RequestStatus;
 import com.mahesh.daw.service.RequestService;
 import jakarta.validation.Valid;
@@ -52,10 +52,14 @@ public class RequestController {
 
     @GetMapping("/number/{requestNumber}")
     public ResponseEntity<RequestResponse> getRequestByNumber(
-            @PathVariable String requestNumber) {
+            @PathVariable String requestNumber,
+            Authentication authentication) {
 
         return ResponseEntity.ok(
-                requestService.getRequestResponseByNumber(requestNumber)
+                requestService.getRequestResponseByNumberForEmail(
+                        requestNumber,
+                        authentication.getName()
+                )
         );
     }
 
@@ -103,7 +107,7 @@ public class RequestController {
     @PutMapping("/{id}")
     public ResponseEntity<RequestResponse> updateRequest(
             @PathVariable Long id,
-            @Valid @RequestBody Request request,
+            @Valid @RequestBody RequestUpdateRequest request,
             Authentication authentication) {
 
         return ResponseEntity.ok(

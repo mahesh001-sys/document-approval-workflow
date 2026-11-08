@@ -1,140 +1,131 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import authService from "../api/authService";
 import requestService from "../api/requestService";
+import "../styles/manager-dashboard.css";
 
 function ManagerDashboard() {
   const navigate = useNavigate();
 
   const [requests, setRequests] = useState([]);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [comments, setComments] = useState("");
   const [loading, setLoading] = useState(true);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [actionLoading, setActionLoading] =
-    useState(false);
-
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  const [selectedRequest, setSelectedRequest] =
-    useState(null);
+  const loadRequests = useCallback(async () => {
+    try {
+      const data = await requestService.getAllRequests();
+      setError("");
+      const queue = Array.isArray(data)
+        ? data.filter(
+            (request) =>
+              request.status === "SUBMITTED" ||
+              request.status === "MANAGER_REVIEW"
+          )
+        : [];
 
-  const [comments, setComments] = useState("");
+      setRequests(queue);
 
-  const user = authService.getUser();
-
-  const approverId = user?.id;
-
-
+      setSelectedRequest((current) =>
+        current
+          ? queue.find((request) => request.id === current.id) || null
+          : null
+      );
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          "Unable to load manager requests. Check your manager account access."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let isActive = true;
+    let active = true;
 
-    requestService
-      .getAllRequests()
-      .then((data) => {
-        if (!isActive) return;
+    const fetchInitialRequests = async () => {
+      try {
+        const data = await requestService.getAllRequests();
 
-        const managerRequests =
-          Array.isArray(data)
-            ? data.filter(
-                (request) =>
-                  request.status === "SUBMITTED" ||
-                  request.status === "MANAGER_REVIEW"
-              )
-            : [];
+        if (!active) return;
 
+        const queue = Array.isArray(data)
+          ? data.filter(
+              (request) =>
+                request.status === "SUBMITTED" ||
+                request.status === "MANAGER_REVIEW"
+            )
+          : [];
+
+        setRequests(queue);
         setError("");
-        setRequests(managerRequests);
-      })
-      .catch((err) => {
-        if (!isActive) return;
-
-        console.error(
-          "Failed to load manager requests:",
-          err
-        );
-
-        if (err.response?.status === 401) {
-          authService.logout();
-          navigate("/login");
-          return;
-        }
+      } catch (err) {
+        if (!active) return;
 
         setError(
-          "Unable to load requests. Please try again."
+          err.response?.data?.message ||
+            "Unable to load requests. Check your account access."
         );
-      })
-      .finally(() => {
-        if (isActive) {
-          setLoading(false);
-        }
-      });
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    fetchInitialRequests();
 
     return () => {
-      isActive = false;
+      active = false;
     };
-  }, [navigate, reloadKey]);
+  }, []);
 
   const handleLogout = () => {
     authService.logout();
     navigate("/login");
   };
 
-  const handleStartReview = async (requestId) => {
+  const handleStartReview = async () => {
+    if (!selectedRequest) return;
+
     try {
       setActionLoading(true);
       setError("");
       setMessage("");
 
-      const updatedRequest =
-        await requestService.startManagerReview(
-          requestId
-        );
+      const updated = await requestService.startManagerReview(
+        selectedRequest.id
+      );
 
-      setRequests((previous) =>
-        previous.map((request) =>
-          request.id === requestId
-            ? updatedRequest
-            : request
+      setSelectedRequest(updated);
+      setRequests((current) =>
+        current.map((request) =>
+          request.id === updated.id ? updated : request
         )
       );
 
-      setSelectedRequest(
-        updatedRequest
-      );
-
-      setMessage(
-        "Request moved to Manager Review."
-      );
+      setMessage("Request moved to manager review.");
     } catch (err) {
-      console.error(
-        "Failed to start manager review:",
-        err
+      setError(
+        err.response?.data?.message || "Unable to start manager review."
       );
-
-      if (err.response?.data?.message) {
-        setError(
-          err.response.data.message
-        );
-      } else {
-        setError(
-          "Unable to start manager review."
-        );
-      }
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleApprove = async () => {
-    if (!selectedRequest) {
-      return;
-    }
+  const handleDecision = async (decision) => {
+    if (!selectedRequest) return;
 
-    if (!approverId) {
-      setError(
-        "Manager user ID was not found. Please log in again."
-      );
+    const trimmedComments = comments.trim();
+
+    if (
+      (decision === "reject" || decision === "return") &&
+      !trimmedComments
+    ) {
+      setError("Comments are required for rejection or return.");
       return;
     }
 
@@ -143,752 +134,243 @@ function ManagerDashboard() {
       setError("");
       setMessage("");
 
-      await requestService.approveManagerRequest(
+      if (decision === "approve") {
+        await requestService.approveManagerRequest(
           selectedRequest.id,
-          approverId,
-          comments.trim()
+          trimmedComments
         );
+      } else if (decision === "reject") {
+        await requestService.rejectManagerRequest(
+          selectedRequest.id,
+          trimmedComments
+        );
+      } else {
+        await requestService.returnManagerRequest(
+          selectedRequest.id,
+          trimmedComments
+        );
+      }
 
-      setRequests((previous) =>
-        previous.filter(
-          (request) =>
-            request.id !==
-            selectedRequest.id
-        )
+      setMessage(
+        decision === "approve"
+          ? "Request approved and forwarded to Admin."
+          : decision === "reject"
+            ? "Request rejected."
+            : "Request returned to the employee."
       );
 
       setSelectedRequest(null);
       setComments("");
-
-      setMessage(
-        "Request approved successfully."
-      );
+      await loadRequests();
     } catch (err) {
-      console.error(
-        "Failed to approve request:",
-        err
+      setError(
+        err.response?.data?.message ||
+          `Unable to ${decision} this request.`
       );
-
-      if (err.response?.data?.message) {
-        setError(
-          err.response.data.message
-        );
-      } else {
-        setError(
-          "Unable to approve the request."
-        );
-      }
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleReject = async () => {
-    if (!selectedRequest) {
-      return;
-    }
-
-    if (!approverId) {
-      setError(
-        "Manager user ID was not found. Please log in again."
-      );
-      return;
-    }
-
-    if (!comments.trim()) {
-      setError(
-        "Please provide a comment before rejecting the request."
-      );
-      return;
-    }
-
-    try {
-      setActionLoading(true);
-      setError("");
-      setMessage("");
-
-      await requestService.rejectManagerRequest(
-        selectedRequest.id,
-        approverId,
-        comments.trim()
-      );
-
-      setRequests((previous) =>
-        previous.filter(
-          (request) =>
-            request.id !==
-            selectedRequest.id
-        )
-      );
-
-      setSelectedRequest(null);
-      setComments("");
-
-      setMessage(
-        "Request rejected successfully."
-      );
-    } catch (err) {
-      console.error(
-        "Failed to reject request:",
-        err
-      );
-
-      if (err.response?.data?.message) {
-        setError(
-          err.response.data.message
-        );
-      } else {
-        setError(
-          "Unable to reject the request."
-        );
-      }
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleReturn = async () => {
-    if (!selectedRequest) {
-      return;
-    }
-
-    if (!approverId) {
-      setError(
-        "Manager user ID was not found. Please log in again."
-      );
-      return;
-    }
-
-    if (!comments.trim()) {
-      setError(
-        "Please provide a comment before returning the request."
-      );
-      return;
-    }
-
-    try {
-      setActionLoading(true);
-      setError("");
-      setMessage("");
-
-      await requestService.returnManagerRequest(
-        selectedRequest.id,
-        approverId,
-        comments.trim()
-      );
-
-      setRequests((previous) =>
-        previous.filter(
-          (request) =>
-            request.id !==
-            selectedRequest.id
-        )
-      );
-
-      setSelectedRequest(null);
-      setComments("");
-
-      setMessage(
-        "Request returned to the employee for changes."
-      );
-    } catch (err) {
-      console.error(
-        "Failed to return request:",
-        err
-      );
-
-      if (err.response?.data?.message) {
-        setError(
-          err.response.data.message
-        );
-      } else {
-        setError(
-          "Unable to return the request."
-        );
-      }
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const getStatusClass = (status) => {
-    if (!status) {
-      return "status";
-    }
-
-    return `status ${status
-      .toLowerCase()
-      .replaceAll("_", "-")}`;
-  };
-
-  const getStatusLabel = (status) => {
-    if (!status) {
-      return "UNKNOWN";
-    }
-
-    return status.replaceAll("_", " ");
-  };
-
-  const pendingCount = requests.length;
-
-  const submittedCount = requests.filter(
-    (request) =>
-      request.status === "SUBMITTED"
-  ).length;
-
-  const managerReviewCount = requests.filter(
-    (request) =>
-      request.status ===
-      "MANAGER_REVIEW"
-  ).length;
+  const formatDate = (value) =>
+    value ? new Date(value).toLocaleString() : "—";
 
   return (
-    <div className="dashboard-page">
-
+    <main className="dashboard-page manager-dashboard">
       <header className="dashboard-header">
-
         <div>
-          <span className="section-label">
-            MANAGER WORKSPACE
-          </span>
-
-          <h1>
-            Approval Requests
-          </h1>
-
-          <p>
-            {user?.email
-              ? `Signed in as ${user.email}`
-              : "Review and manage employee requests"}
-          </p>
+          <span className="section-label">MANAGER WORKSPACE</span>
+          <h1>Manager Dashboard</h1>
+          <p>Review employee requests and make approval decisions.</p>
         </div>
 
-        <div className="dashboard-actions">
-
+        <div className="hero-actions">
           <button
             type="button"
             className="button secondary"
-            onClick={() => setReloadKey((current) => current + 1)}
+            onClick={loadRequests}
             disabled={loading || actionLoading}
           >
             Refresh
           </button>
-
           <button
             type="button"
-            className="button secondary"
+            className="button primary"
             onClick={handleLogout}
-            disabled={actionLoading}
           >
             Logout
           </button>
-
         </div>
-
       </header>
 
-      <main className="dashboard-content">
+      <section className="dashboard-stats">
+        <div className="stat-card">
+          <h3>{requests.length}</h3>
+          <p>Requests awaiting manager action</p>
+        </div>
+        <div className="stat-card">
+          <h3>
+            {requests.filter((r) => r.status === "SUBMITTED").length}
+          </h3>
+          <p>New submissions</p>
+        </div>
+        <div className="stat-card">
+          <h3>
+            {requests.filter((r) => r.status === "MANAGER_REVIEW").length}
+          </h3>
+          <p>Under review</p>
+        </div>
+      </section>
 
-        <section className="dashboard-stats">
+      {error && <p role="alert" className="error-message">{error}</p>}
+      {message && <p role="status" className="success-message">{message}</p>}
 
-          <div className="stat-card">
-            <span>
-              Pending Requests
-            </span>
+      <section className="requests-section">
+        <div className="dashboard-panel">
+          <h2>Manager Approval Queue</h2>
 
-            <strong>
-              {pendingCount}
-            </strong>
-          </div>
-
-          <div className="stat-card">
-            <span>
-              Submitted
-            </span>
-
-            <strong>
-              {submittedCount}
-            </strong>
-          </div>
-
-          <div className="stat-card">
-            <span>
-              Manager Review
-            </span>
-
-            <strong>
-              {managerReviewCount}
-            </strong>
-          </div>
-
-        </section>
-
-        {message && (
-          <div
-            style={{
-              marginBottom: "20px",
-              padding: "14px",
-              borderRadius: "8px",
-              background: "#ecfdf3",
-              color: "#027a48"
-            }}
-          >
-            {message}
-          </div>
-        )}
-
-        {error && (
-          <div
-            style={{
-              marginBottom: "20px",
-              padding: "14px",
-              borderRadius: "8px",
-              background: "#fef3f2",
-              color: "#b42318"
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        <section className="requests-section">
-
-          <div className="section-heading">
-
-            <span className="section-label">
-              APPROVAL QUEUE
-            </span>
-
-            <h2>
-              Requests Waiting for Review
-            </h2>
-
-            <p>
-              Review requests submitted by
-              employees and take the appropriate
-              workflow action.
-            </p>
-
-          </div>
-
-          {loading && (
-            <div className="empty-state">
-              <p>
-                Loading approval requests...
-              </p>
+          {loading ? (
+            <p>Loading requests...</p>
+          ) : requests.length === 0 ? (
+            <p>No requests are waiting for manager action.</p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table className="dashboard-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th align="left">Request</th>
+                    <th align="left">Employee</th>
+                    <th align="left">Type</th>
+                    <th align="left">Priority</th>
+                    <th align="left">Status</th>
+                    <th align="left">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {requests.map((request) => (
+                    <tr key={request.id}>
+                      <td>{request.requestNumber}</td>
+                      <td>
+                        {request.requesterFirstName}{" "}
+                        {request.requesterLastName}
+                      </td>
+                      <td>{request.requestTypeName || "—"}</td>
+                      <td>
+                        <span className={`priority-badge priority-${String(request.priority || "medium").toLowerCase()}`}>
+                          {request.priority || "—"}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`status-badge status-${String(request.status || "unknown").toLowerCase().replaceAll("_", "-")}`}>
+                          {String(request.status || "UNKNOWN").replaceAll("_", " ")}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() => {
+                            setSelectedRequest(request);
+                            setComments("");
+                            setError("");
+                            setMessage("");
+                          }}
+                        >
+                          Review
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
+        </div>
+      </section>
 
-          {!loading &&
-            !error &&
-            requests.length === 0 && (
-              <div className="empty-state">
+      {selectedRequest && (
+        <section className="requests-section">
+          <div className="dashboard-panel">
+            <h2>Request Review</h2>
+            <p><strong>Request number:</strong> {selectedRequest.requestNumber}</p>
+            <p><strong>Title:</strong> {selectedRequest.title}</p>
+            <p>
+              <strong>Employee:</strong>{" "}
+              {selectedRequest.requesterFirstName}{" "}
+              {selectedRequest.requesterLastName}
+            </p>
+            <p><strong>Email:</strong> {selectedRequest.requesterEmail}</p>
+            <p><strong>Request type:</strong> {selectedRequest.requestTypeName}</p>
+            <p><strong>Priority:</strong> {selectedRequest.priority}</p>
+            <p><strong>Status:</strong> {selectedRequest.status}</p>
+            <p><strong>Submitted:</strong> {formatDate(selectedRequest.submittedAt)}</p>
+            <p><strong>Description:</strong></p>
+            <p>{selectedRequest.description || "No description provided."}</p>
 
-                <div className="empty-icon">
-                  ✓
-                </div>
-
-                <h3>
-                  No pending requests
-                </h3>
-
-                <p>
-                  There are currently no employee
-                  requests waiting for manager review.
-                </p>
-
-              </div>
-            )}
-
-          {!loading &&
-            requests.length > 0 && (
-              <div className="request-table-wrapper">
-
-                <table className="request-table">
-
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Request Number</th>
-                      <th>Title</th>
-                      <th>Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-
-                    {requests.map(
-                      (request) => (
-                        <tr
-                          key={request.id}
-                        >
-
-                          <td>
-                            #{request.id}
-                          </td>
-
-                          <td>
-                            {request.requestNumber ||
-                              "-"}
-                          </td>
-
-                          <td>
-                            {request.title ||
-                              "Untitled Request"}
-                          </td>
-
-                          <td>
-
-                            <span
-                              className={getStatusClass(
-                                request.status
-                              )}
-                            >
-                              {getStatusLabel(
-                                request.status
-                              )}
-                            </span>
-
-                          </td>
-
-                          <td>
-
-                            <button
-                              type="button"
-                              className="table-button"
-                              disabled={
-                                actionLoading
-                              }
-                              onClick={() =>
-                                setSelectedRequest(
-                                  request
-                                )
-                              }
-                            >
-                              Review
-                            </button>
-
-                          </td>
-
-                        </tr>
-                      )
-                    )}
-
-                  </tbody>
-
-                </table>
-
-              </div>
-            )}
-
-        </section>
-
-        {selectedRequest && (
-          <section
-            className="requests-section"
-            style={{
-              marginTop: "30px"
-            }}
-          >
-
-            <div className="section-heading">
-
-              <span className="section-label">
-                REQUEST REVIEW
-              </span>
-
-              <h2>
-                {selectedRequest.title ||
-                  "Request Details"}
-              </h2>
-
-              <p>
-                Request #
-                {selectedRequest.requestNumber ||
-                  selectedRequest.id}
-              </p>
-
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gap: "18px",
-                marginBottom: "24px"
-              }}
-            >
-
-              <div>
-                <strong>
-                  Description
-                </strong>
-
-                <p
-                  style={{
-                    marginTop: "6px",
-                    lineHeight: "1.7",
-                    whiteSpace: "pre-wrap"
-                  }}
-                >
-                  {selectedRequest.description ||
-                    "-"}
-                </p>
-              </div>
-
-              <div>
-                <strong>
-                  Request Type
-                </strong>
-
-                <p
-                  style={{
-                    marginTop: "6px"
-                  }}
-                >
-                  {selectedRequest.requestType ||
-                    "-"}
-                </p>
-              </div>
-
-              <div>
-                <strong>
-                  Current Status
-                </strong>
-
-                <p
-                  style={{
-                    marginTop: "8px"
-                  }}
-                >
-                  <span
-                    className={getStatusClass(
-                      selectedRequest.status
-                    )}
-                  >
-                    {getStatusLabel(
-                      selectedRequest.status
-                    )}
-                  </span>
-                </p>
-              </div>
-
-            </div>
-
-            {selectedRequest.status ===
-              "SUBMITTED" && (
-              <div
-                style={{
-                  marginBottom: "24px"
-                }}
+            {selectedRequest.status === "SUBMITTED" ? (
+              <button
+                type="button"
+                className="button primary"
+                disabled={actionLoading}
+                onClick={handleStartReview}
               >
-
-                <button
-                  type="button"
-                  className="button secondary"
-                  onClick={() =>
-                    handleStartReview(
-                      selectedRequest.id
-                    )
-                  }
-                  disabled={actionLoading}
-                >
-                  {actionLoading
-                    ? "Processing..."
-                    : "Start Manager Review"}
-                </button>
-
-              </div>
-            )}
-
-            {selectedRequest.status ===
-              "MANAGER_REVIEW" && (
+                {actionLoading ? "Processing..." : "Start Review"}
+              </button>
+            ) : (
               <>
-
-                <label htmlFor="manager-comments">
-                  Comments
-                </label>
-
+                <label htmlFor="manager-comments">Comments</label>
                 <textarea
                   id="manager-comments"
                   value={comments}
-                  onChange={(event) =>
-                    setComments(
-                      event.target.value
-                    )
-                  }
-                  placeholder="Enter review comments..."
+                  onChange={(event) => setComments(event.target.value)}
                   maxLength={1000}
-                  rows={5}
-                  disabled={actionLoading}
-                  style={{
-                    width: "100%",
-                    padding: "14px",
-                    border:
-                      "1px solid #d0d5dd",
-                    borderRadius: "9px",
-                    resize: "vertical",
-                    marginTop: "8px"
-                  }}
+                  rows={4}
+                  placeholder="Add review comments..."
+                  style={{ width: "100%", marginBottom: "16px" }}
                 />
 
-                <p
-                  style={{
-                    fontSize: "12px",
-                    color: "#667085",
-                    marginTop: "6px"
-                  }}
-                >
-                  Maximum 1000 characters.
-                </p>
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "12px",
-                    flexWrap: "wrap",
-                    marginTop: "20px"
-                  }}
-                >
-
+                <div className="hero-actions">
                   <button
                     type="button"
                     className="button primary"
-                    onClick={handleApprove}
                     disabled={actionLoading}
+                    onClick={() => handleDecision("approve")}
                   >
-                    {actionLoading
-                      ? "Processing..."
-                      : "Approve"}
+                    Approve
                   </button>
-
                   <button
                     type="button"
                     className="button secondary"
-                    onClick={handleReturn}
                     disabled={actionLoading}
+                    onClick={() => handleDecision("return")}
                   >
-                    Return for Changes
+                    Return to Employee
                   </button>
-
                   <button
                     type="button"
                     className="button secondary"
-                    onClick={handleReject}
                     disabled={actionLoading}
+                    onClick={() => handleDecision("reject")}
                   >
                     Reject
                   </button>
-
                 </div>
-
               </>
             )}
 
-            <div
-              style={{
-                marginTop: "20px"
-              }}
+            <button
+              type="button"
+              className="button secondary"
+              style={{ marginTop: "12px" }}
+              disabled={actionLoading}
+              onClick={() => setSelectedRequest(null)}
             >
-
-              <button
-                type="button"
-                className="button secondary"
-                onClick={() => {
-                  setSelectedRequest(null);
-                  setComments("");
-                  setError("");
-                }}
-                disabled={actionLoading}
-              >
-                Close Review
-              </button>
-
-            </div>
-
-          </section>
-        )}
-
-        <section className="workflow">
-
-          <div className="section-heading">
-
-            <span className="section-label">
-              MANAGER RESPONSIBILITIES
-            </span>
-
-            <h2>
-              Approval process
-            </h2>
-
-            <p>
-              Requests assigned to managers follow
-              a controlled approval process.
-            </p>
-
+              Close
+            </button>
           </div>
-
-          <div className="workflow-steps">
-
-            <div className="workflow-step">
-              <span>01</span>
-
-              <h3>
-                Review
-              </h3>
-
-              <p>
-                Examine the employee request and
-                supporting information.
-              </p>
-            </div>
-
-            <div className="workflow-step">
-              <span>02</span>
-
-              <h3>
-                Approve
-              </h3>
-
-              <p>
-                Approve valid requests for the next
-                workflow stage.
-              </p>
-            </div>
-
-            <div className="workflow-step">
-              <span>03</span>
-
-              <h3>
-                Return
-              </h3>
-
-              <p>
-                Send incomplete requests back to the
-                employee for changes.
-              </p>
-            </div>
-
-            <div className="workflow-step">
-              <span>04</span>
-
-              <h3>
-                Reject
-              </h3>
-
-              <p>
-                Reject requests that do not meet
-                approval requirements.
-              </p>
-            </div>
-
-          </div>
-
         </section>
-
-      </main>
-
-    </div>
+      )}
+    </main>
   );
 }
 
