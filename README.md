@@ -1,223 +1,221 @@
-# Document Approval Workflow
+# Document Approval Workflow System
 
-An enterprise-style full-stack application for managing business requests through a secure, role-based, multi-level approval workflow.
+A full-stack web application for managing employee requests through a structured, role-based approval process. The system enables employees to submit and track requests while managers and administrators review, approve, return, or reject them.
 
-## 🚧 Project Status
+## Table of Contents
 
-**Backend Phase 1 Complete | Phase 2 Complete | Phase 3 In Progress**
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [User Roles](#user-roles)
+- [Supported Request Types](#supported-request-types)
+- [Approval Workflow](#approval-workflow)
+- [Request Statuses](#request-statuses)
+- [Technology Stack](#technology-stack)
+- [Project Architecture](#project-architecture)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Environment Configuration](#environment-configuration)
+- [API Documentation](#api-documentation)
+- [Testing and Verification](#testing-and-verification)
+- [Screenshots](#screenshots)
+- [Current Limitations](#current-limitations)
+- [Future Enhancements](#future-enhancements)
+- [Author](#author)
 
-## 🎯 Objective
+## Overview
 
-The Document Approval Workflow system allows employees to create and submit business requests that move through Manager and Admin approval stages.
+The Document Approval Workflow System digitizes the process of submitting and approving organizational requests.
 
-The backend provides JWT authentication, role-based authorization, request ownership checks, approval history, audit logging, notifications, validation, API documentation, automated testing, and Docker support.
+It provides separate dashboards for employees, managers, and administrators, with role-based access control and a multi-stage approval workflow.
 
-## 🔄 Approval Workflow
+The application uses Spring Boot for backend services, React for the frontend, and MySQL for persistent data storage.
 
-Employee
-↓
-Create Request
-↓
-Submit Request
-↓
-Manager Review
-↓
-Approve / Reject / Return
-↓
-Admin Review
-↓
-Final Approval
-↓
-Completed
+## Key Features
 
-## 👥 User Roles
+- Secure user authentication.
+- Role-based access control.
+- Separate employee, manager, and administrator dashboards.
+- Request creation and editing.
+- Request submission and status tracking.
+- Multi-stage manager and administrator approval.
+- Request return and resubmission.
+- Request rejection with comments.
+- Approval history and audit logs.
+- Notifications for workflow updates.
+- MySQL database integration.
+- RESTful backend APIs.
+- Responsive React user interface.
+
+## User Roles
 
 ### Employee
-- Create requests
-- Update owned requests
-- Submit requests
-- Track request status
-- View workflow information
+
+Employees can:
+
+- Register and log in.
+- Create and edit requests.
+- Submit requests for approval.
+- View their own requests.
+- Track request statuses.
+- View comments and approval history.
+- Respond to returned requests.
+- Resubmit corrected requests.
 
 ### Manager
-- Review requests
-- Approve requests
-- Reject requests
-- Return requests for correction
 
-### Admin
-- Perform final approval
-- Manage workflow activity
-- Access administrative operations
-- Review audit information
+Managers can:
 
-## 🛠️ Technology Stack
+- Log in securely.
+- View requests assigned to them.
+- Review request details.
+- Approve requests.
+- Reject requests.
+- Return requests for changes.
+- Add review comments.
+- View approval history.
 
-### Backend
-- Java 17
-- Spring Boot 3.5.6
-- Spring Security
-- JWT
-- Spring Data JPA
-- Hibernate
-- Jakarta Validation
+### Administrator
 
-### Database
-- MySQL 8
+Administrators can:
 
-### Testing
-- JUnit 5
-- Mockito
-- Spring Boot Test
-- Spring Security Test
+- View all requests.
+- Perform final approval.
+- Reject requests.
+- Manage users.
+- View audit logs.
+- Monitor workflow activity.
+- View system statistics.
 
-### API & Documentation
-- REST APIs
-- Swagger / OpenAPI
-- JWT Bearer Authentication
+## Supported Request Types
 
-### DevOps & Tools
-- Maven
-- Git
-- GitHub
-- GitHub Actions
-- Docker
-- Docker Compose
+The requirements document defines the following request categories:
 
-### Frontend
-- React
-- JavaScript
-- HTML
-- CSS
+### 1. Travel Request
 
-## ✅ Completed
+Typical information includes:
 
-### Phase 1 — Core Workflow
+- Destination
+- Travel date
+- Purpose
+- Estimated amount
+- Supporting documents
 
-- Request creation and management
-- Request status management
-- Employee → Manager → Admin approval workflow
-- Manager approval
-- Admin final approval
-- Reject workflow
-- Return workflow
-- Role-based authorization
-- Request ownership enforcement
-- Input validation
-- Approval history
-- Audit logging
-- Notifications
-- Workflow status validation
+### 2. Expense Reimbursement
 
-### Security
+Typical information includes:
 
-- JWT authentication
-- BCrypt password encryption
-- Stateless Spring Security
-- Role-based access control
-- Manager/Admin endpoint protection
-- Request ownership checks
-- REST authentication and access-denied handling
+- Expense type
+- Expense date
+- Amount
+- Description
+- Receipt
 
-### Testing
+### 3. Document Submission
 
-- Unit testing with JUnit 5 and Mockito
-- Service-layer workflow tests
-- Request ownership tests
-- Validation and status-transition tests
-- GitHub Actions automated build verification
+A request category for submitting organizational documents.
 
-**Current test status: 16 tests passing | 0 failures | 0 errors**
+Request types are represented through a configurable `request_types` database entity.
 
-### Phase 2 — Demo & Deployment
+**Note:** The request categories and their descriptions do not imply that file attachments can currently be uploaded. Attachment upload and storage are not included as verified working functionality in this version.
 
-- Swagger / OpenAPI integration
-- JWT Bearer authentication in Swagger
-- Swagger endpoints secured through Spring Security
-- README documentation
-- Dockerfile for Spring Boot
-- MySQL Docker container
-- Docker Compose configuration
-- Spring Boot + MySQL container setup
-- GitHub Actions CI verification
+## Approval Workflow
 
-## 🚀 Phase 3 — Full-Stack Development
+The application follows a two-stage approval process.
 
-### Frontend
+```mermaid
+flowchart TD
+    A["Employee creates request"] --> B["Draft"]
+    B --> C["Employee submits request"]
+    C --> D["Submitted"]
+    D --> E["Manager review"]
+    E --> F{"Manager decision"}
+    F -->|Approve| G["Manager Approved"]
+    F -->|Return| H["Returned"]
+    F -->|Reject| I["Rejected"]
+    H --> J["Employee corrects request"]
+    J --> C
+    G --> K["Administrator review"]
+    K --> L{"Administrator decision"}
+    L -->|Approve| M["Completed"]
+    L -->|Return| H
+    L -->|Reject| I
+```
 
-- [ ] React application
-- [ ] Login page
-- [ ] JWT authentication integration
-- [ ] Employee dashboard
-- [ ] Manager dashboard
-- [ ] Admin dashboard
-- [ ] Request creation UI
-- [ ] Request details and status tracking
-- [ ] Approve / Reject / Return UI
+### Workflow Explanation
 
-### Document Management
+1. The employee creates a request and saves it as a draft.
+2. The employee submits the request.
+3. The manager starts reviewing the submitted request.
+4. The manager can approve, return, or reject the request.
+5. Manager-approved requests move to administrator review.
+6. The administrator can approve, return, or reject the request.
+7. Final administrator approval marks the request as completed.
+8. Returned requests can be corrected and resubmitted by the employee.
 
-- [ ] Document upload
-- [ ] Document metadata
-- [ ] Document download/view
-- [ ] File type validation
-- [ ] Secure document access
+## Request Statuses
 
-### Collaboration
+The application defines the following request statuses:
 
-- [ ] Comments
-- [ ] Request discussion
-- [ ] Workflow activity history
+| Status | Description |
+|---|---|
+| `DRAFT` | Request created but not submitted |
+| `SUBMITTED` | Request submitted by the employee |
+| `MANAGER_REVIEW` | Manager is reviewing the request |
+| `MANAGER_APPROVED` | Manager has approved the request |
+| `ADMIN_REVIEW` | Administrator is reviewing the request |
+| `APPROVED` | Approval action recorded in the workflow |
+| `RETURNED` | Request returned for corrections |
+| `REJECTED` | Request rejected during an approval stage |
+| `COMPLETED` | Final administrator approval completed |
 
-### Advanced Features
+The final approval operation transitions the request to `COMPLETED`.
 
-- [ ] Search and filtering
-- [ ] Dashboard analytics
-- [ ] Advanced audit history
-- [ ] Improved notification management
+## Technology Stack
 
-## 🧪 QA & Automation Roadmap
+| Layer | Technologies |
+|---|---|
+| Frontend | React.js, JavaScript, HTML, CSS |
+| Build Tool | Vite |
+| Backend | Java, Spring Boot |
+| Security | Spring Security, JWT |
+| Database | MySQL |
+| ORM | Spring Data JPA, Hibernate |
+| API | REST APIs |
+| Build Management | Maven |
+| Testing | JUnit, Mockito, Spring Boot Test, ESLint |
+| Deployment Setup | Docker, Docker Compose |
 
-- [ ] REST API integration testing
-- [ ] Security test coverage
-- [ ] Complete workflow test scenarios
-- [ ] Selenium UI automation
-- [ ] TestNG automation suite
-- [ ] CI execution of automated tests
+## Project Architecture
 
-## 📡 API Documentation
+```mermaid
+flowchart TB
+    U["Users: Employee / Manager / Admin"]
+    F["React Frontend"]
+    A["Spring Boot REST API"]
+    S["Spring Security and JWT"]
+    C["Controllers"]
+    SV["Service Layer"]
+    R["Spring Data JPA Repositories"]
+    D[("MySQL Database")]
 
-When the application is running:
+    U --> F
+    F --> A
+    A --> S
+    S --> C
+    C --> SV
+    SV --> R
+    R --> D
+```
 
-`http://localhost:8080/swagger-ui/index.html`
+### Architecture Overview
 
-OpenAPI specification:
+- **Frontend:** Provides user interfaces and role-specific dashboards.
+- **Backend:** Handles business logic, request processing, and approval operations.
+- **Security:** Protects application endpoints using authentication and role-based authorization.
+- **Database:** Stores users, requests, request types, approval history, and audit information.
+- **Workflow Services:** Enforce the manager and administrator approval sequence.
 
-`http://localhost:8080/v3/api-docs`
-
-## 🐳 Docker
-
-The project includes Docker support for running the Spring Boot backend with MySQL.
-
-Start the application:
-
-`docker compose up --build`
-
-Stop the application:
-
-`docker compose down`
-
-## 🗄️ Database
-
-MySQL is used as the primary relational database.
-
-JPA/Hibernate manages entity persistence and database relationships.
-
-Database design documentation:
-
-`docs/database-design.md`
-
-## 🏗️ Project Structure
+## Project Structure
 
 ```text
 document-approval-workflow/
@@ -225,21 +223,264 @@ document-approval-workflow/
 ├── backend/
 │   ├── src/
 │   │   ├── main/
-│   │   │   ├── java/com/mahesh/daw/
-│   │   │   │   ├── config/
-│   │   │   │   ├── controller/
-│   │   │   │   ├── entity/
-│   │   │   │   ├── repository/
-│   │   │   │   ├── security/
-│   │   │   │   └── service/
+│   │   │   ├── java/
 │   │   │   └── resources/
 │   │   └── test/
-│   │
 │   ├── Dockerfile
 │   └── pom.xml
 │
+├── frontend/
+│   ├── src/
+│   │   ├── api/
+│   │   ├── components/
+│   │   └── ...
+│   ├── .env.example
+│   └── package.json
+│
 ├── docs/
-│   └── database-design.md
+│   ├── database-design.md
+│   ├── requirements.md
+│   └── workflow.md
 │
 ├── docker-compose.yml
+├── .gitignore
 └── README.md
+```
+
+## Getting Started
+
+### Prerequisites
+
+Install the following:
+
+- Java 17 or compatible version required by the backend configuration.
+- Maven.
+- Node.js and npm.
+- Docker Desktop or Docker Engine with Docker Compose.
+- Git.
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/mahesh001-sys/document-approval-workflow.git
+
+cd document-approval-workflow
+```
+
+### 2. Configure Environment Variables
+
+Create a root `.env` file for Docker Compose configuration.
+
+Create a frontend environment file:
+
+```bash
+cp frontend/.env.example frontend/.env
+```
+
+Set the frontend API URL to the backend address used by your environment.
+
+Do not commit `.env` files or expose database passwords and JWT secrets.
+
+See the [Environment Configuration](#environment-configuration) section.
+
+### 3. Start the Backend and Database
+
+After configuring the required root environment variables, run:
+
+```bash
+docker compose up --build -d
+```
+
+Check the running containers:
+
+```bash
+docker compose ps
+```
+
+View application logs:
+
+```bash
+docker compose logs -f backend
+```
+
+### 4. Start the Frontend
+
+Open another terminal:
+
+```bash
+cd frontend
+
+npm install
+
+npm run dev
+```
+
+Open the Vite development URL shown in your terminal.
+
+### 5. Stop the Application
+
+```bash
+docker compose stop
+```
+
+To stop and remove containers without deleting persistent database volumes:
+
+```bash
+docker compose down
+```
+
+**Important:** Do not use `docker compose down -v` if you want to preserve your database data.
+
+## Environment Configuration
+
+### Backend and Docker Compose
+
+Configure the variables required by your `docker-compose.yml` and Spring Boot application.
+
+| Variable | Purpose |
+|---|---|
+| `MYSQL_DATABASE` | MySQL database name |
+| `MYSQL_USER` | MySQL application user |
+| `MYSQL_PASSWORD` | MySQL application password |
+| `MYSQL_ROOT_PASSWORD` | MySQL root password |
+| `DB_USERNAME` | Backend database username |
+| `DB_PASSWORD` | Backend database password |
+| `JWT_SECRET` | Secret used for JWT signing |
+| `CORS_ALLOWED_ORIGINS` | Allowed frontend origins, if configured |
+
+Use a securely generated JWT secret. Never publish its actual value.
+
+### Frontend
+
+Configure:
+
+```env
+VITE_API_BASE_URL=http://localhost:8080/api
+```
+
+Adjust the URL to match your backend deployment.
+
+Do not commit environment files containing secrets.
+
+## API Documentation
+
+The backend exposes REST APIs for authentication, users, requests, and approval workflow operations.
+
+When the backend is running, Swagger UI is available at:
+
+```text
+http://localhost:8080/swagger-ui/index.html
+```
+
+The OpenAPI specification is available at:
+
+```text
+http://localhost:8080/v3/api-docs
+```
+
+## Testing and Verification
+
+The following checks were previously verified during project development:
+
+### Backend
+
+- 67 backend tests passed.
+- Authentication and authorization tests.
+- Request service tests.
+- Approval workflow tests.
+- JWT authentication tests.
+- Exception handling tests.
+
+### Frontend
+
+- ESLint checks passed.
+- Vite production build completed successfully.
+
+### Workflow Verification
+
+The end-to-end approval process was tested:
+
+- Employee request creation and submission.
+- Manager review and approval.
+- Administrator final approval.
+- Request completion.
+- Approval history and audit log verification.
+
+**Verification note:** These are previously recorded development results, not a claim that the tests were rerun against every subsequent change.
+
+To rerun the checks:
+
+Backend:
+
+```bash
+cd backend
+mvn test
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm run lint
+npm run build
+```
+
+## Screenshots
+
+### Home Page
+
+![Home Page](docs/screenshots/home.png)
+
+### Login Pages
+
+| Employee Login | Manager Login | Admin Login |
+|---|---|---|
+| ![Employee Login](docs/screenshots/employee-login.png) | ![Manager Login](docs/screenshots/manager-login.png) | ![Admin Login](docs/screenshots/admin-login.png) |
+
+### Login Interface
+
+![Login Page](docs/screenshots/login-page.png)
+
+### Dashboards
+
+#### Employee Dashboard
+![Employee Dashboard](docs/screenshots/employee-dashboard.png)
+
+#### Manager Dashboard
+![Manager Dashboard](docs/screenshots/manager-dashboard.png)
+
+#### Admin Dashboard
+![Admin Dashboard](docs/screenshots/admin-dashboard.png)
+
+### Approval History
+
+![Approval History](docs/screenshots/approval-history.png)
+
+## Current Limitations
+
+- File attachment upload and storage are not verified as implemented.
+- Production deployment has not yet been completed and verified.
+- Deployment-specific environment configuration is still required.
+
+## Future Enhancements
+
+- Supporting document and receipt upload with secure storage.
+- Email notifications.
+- Advanced request filtering and reporting.
+- Enhanced dashboard analytics.
+- Production deployment and monitoring.
+- Additional automated integration and end-to-end tests.
+
+## Author
+
+**Mahesh Kumar**
+
+B.Tech Information Technology Graduate
+
+GitHub: [mahesh001-sys](https://github.com/mahesh001-sys)
+
+Project Repository: [Document Approval Workflow System](https://github.com/mahesh001-sys/document-approval-workflow)
+
+---
+
+*Built with React, Spring Boot, Spring Security, JWT, and MySQL.*

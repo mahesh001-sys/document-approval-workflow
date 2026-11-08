@@ -1,5 +1,6 @@
 package com.mahesh.daw.controller;
 
+import com.mahesh.daw.dto.ApprovalHistoryResponse;
 import com.mahesh.daw.entity.ApprovalHistory;
 import com.mahesh.daw.entity.Request;
 import com.mahesh.daw.service.ApprovalHistoryService;
@@ -7,6 +8,7 @@ import com.mahesh.daw.service.RequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,9 +21,9 @@ public class ApprovalHistoryController {
     private final ApprovalHistoryService approvalHistoryService;
     private final RequestService requestService;
 
-    // Create approval history
+    // Create approval history through trusted workflow services only.
     @PostMapping
-    public ResponseEntity<ApprovalHistory> createHistory(
+    public ResponseEntity<ApprovalHistoryResponse> createHistory(
             @Valid @RequestBody ApprovalHistory history) {
 
         return ResponseEntity.ok(
@@ -29,9 +31,9 @@ public class ApprovalHistoryController {
         );
     }
 
-    // Get approval history by ID
+    // Get approval history by ID.
     @GetMapping("/{id}")
-    public ResponseEntity<ApprovalHistory> getHistoryById(
+    public ResponseEntity<ApprovalHistoryResponse> getHistoryById(
             @PathVariable Long id) {
 
         return ResponseEntity.ok(
@@ -39,15 +41,33 @@ public class ApprovalHistoryController {
         );
     }
 
-    // Get approval history for a request
+    // Employees can read their own request history.
+    // Managers and admins can read request history as well.
     @GetMapping("/request/{requestId}")
-    public ResponseEntity<List<ApprovalHistory>> getHistoryByRequest(
-            @PathVariable Long requestId) {
+    public ResponseEntity<List<ApprovalHistoryResponse>> getHistoryByRequest(
+            @PathVariable Long requestId,
+            Authentication authentication) {
 
-        Request request = requestService.getRequestById(requestId);
+        boolean isManagerOrAdmin = authentication.getAuthorities()
+                .stream()
+                .anyMatch(authority ->
+                        authority.getAuthority().equals("ROLE_MANAGER")
+                        || authority.getAuthority().equals("ROLE_ADMIN")
+                );
+
+        Request request;
+
+        if (isManagerOrAdmin) {
+            request = requestService.getRequestById(requestId);
+        } else {
+            request = requestService.getRequestByIdForEmail(
+                    requestId,
+                    authentication.getName()
+            );
+        }
 
         return ResponseEntity.ok(
-                approvalHistoryService.getHistoryByRequest(request)
+                approvalHistoryService.getHistoryByRequest(request.getId())
         );
     }
 }

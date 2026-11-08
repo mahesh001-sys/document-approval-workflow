@@ -305,9 +305,9 @@ class SecurityConfigTest {
 
     @Test
     @WithMockUser(roles = "USER")
-    void employeeCannotReadApprovalHistory() throws Exception {
+    void employeeCanPassApprovalHistoryAuthorization() throws Exception {
         mockMvc.perform(get("/api/approval-history/request/1"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
     }
 
     @Test

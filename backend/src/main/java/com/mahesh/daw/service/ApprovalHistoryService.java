@@ -1,11 +1,11 @@
 package com.mahesh.daw.service;
 
+import com.mahesh.daw.dto.ApprovalHistoryResponse;
 import com.mahesh.daw.entity.ApprovalHistory;
-import com.mahesh.daw.entity.Request;
-import com.mahesh.daw.entity.User;
 import com.mahesh.daw.repository.ApprovalHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -15,29 +15,53 @@ public class ApprovalHistoryService {
 
     private final ApprovalHistoryRepository approvalHistoryRepository;
 
-    public ApprovalHistory createHistory(ApprovalHistory history) {
-        return approvalHistoryRepository.save(history);
+    @Transactional
+    public ApprovalHistoryResponse createHistory(ApprovalHistory history) {
+        ApprovalHistory saved = approvalHistoryRepository.save(history);
+        return toResponse(saved);
     }
 
-    public ApprovalHistory getHistoryById(Long id) {
-
-        return approvalHistoryRepository.findById(id)
+    @Transactional(readOnly = true)
+    public ApprovalHistoryResponse getHistoryById(Long id) {
+        ApprovalHistory history = approvalHistoryRepository
+                .findWithApproverById(id)
                 .orElseThrow(() ->
                         new IllegalArgumentException(
                                 "Approval history not found with id: " + id
                         )
                 );
+
+        return toResponse(history);
     }
 
-    public List<ApprovalHistory> getHistoryByRequest(Request request) {
-
+    @Transactional(readOnly = true)
+    public List<ApprovalHistoryResponse> getHistoryByRequest(Long requestId) {
         return approvalHistoryRepository
-                .findByRequestOrderByCreatedAtAsc(request);
+                .findByRequest_IdOrderByCreatedAtAsc(requestId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    public List<ApprovalHistory> getHistoryByApprover(User approver) {
+    private ApprovalHistoryResponse toResponse(ApprovalHistory history) {
+        var approver = history.getApprover();
 
-        return approvalHistoryRepository
-                .findByApproverOrderByCreatedAtDesc(approver);
+        ApprovalHistoryResponse.ApproverSummary approverSummary =
+                approver == null ? null :
+                        new ApprovalHistoryResponse.ApproverSummary(
+                                approver.getFirstName(),
+                                approver.getLastName(),
+                                approver.getEmail()
+                        );
+
+        return new ApprovalHistoryResponse(
+                history.getId(),
+                approverSummary,
+                history.getAction(),
+                history.getComments(),
+                history.getPreviousStatus(),
+                history.getNewStatus(),
+                history.getCreatedAt()
+        );
     }
 }

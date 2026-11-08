@@ -19,6 +19,7 @@ services:
       retries: 5
 
   backend:
+    image: document-approval-workflow-backend:approval-history-fixed
     build:
       context: ./backend
       dockerfile: Dockerfile

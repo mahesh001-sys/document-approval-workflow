@@ -162,8 +162,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/approval-steps/**")
                         .denyAll()
 
-                        // Approval history is read-only through the API.
-                        // Workflow services create trusted history records.
+                        // Employees can request history; ownership is checked
+                        // in the controller. Managers and admins retain access.
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/approval-history/request/*"
+                        ).authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/approval-history/**")
                         .hasAnyRole("MANAGER", "ADMIN")
                         .requestMatchers("/api/approval-history/**")

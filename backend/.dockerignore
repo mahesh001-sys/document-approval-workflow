@@ -1,0 +1,7 @@
+target/
+mysql_data_backup.tar.gz
+mysql_data_backup_offline.tar.gz
+.git/
+.env
+.env.*
+!.env.example

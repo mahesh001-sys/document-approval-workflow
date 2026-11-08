@@ -1,3 +1,4 @@
+
 import axiosClient from "./axiosClient";
 
 const requestService = {
@@ -35,6 +36,13 @@ const requestService = {
 
   async getRequestsByStatus(status) {
     const response = await axiosClient.get(`/requests/status/${status}`);
+    return response.data;
+  },
+
+  async getApprovalHistory(requestId) {
+    const response = await axiosClient.get(
+      `/approval-history/request/${requestId}`
+    );
     return response.data;
   },
 
